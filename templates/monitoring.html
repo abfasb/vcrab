@@ -1,0 +1,1211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>V-CRAB SYSTEM - Monitoring</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <style>
+        .sidebar-transition {
+            transition: transform 0.3s ease-in-out;
+        }
+        
+        .main-content-transition {
+            transition: margin-left 0.3s ease-in-out;
+        }
+        
+        .glass-effect {
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .topbar {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(248, 250, 252, 0.95));
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        
+        .sidebar {
+            background: linear-gradient(180deg, #1e293b 0%, #334155 100%);
+            box-shadow: 4px 0 24px rgba(0, 0, 0, 0.15);
+        }
+        
+        .nav-item {
+            transition: all 0.2s ease-in-out;
+        }
+        
+        .nav-item:hover {
+            transform: translateX(4px);
+            background: rgba(59, 130, 246, 0.1);
+        }
+        
+        .nav-item.active {
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        }
+        
+        .sensor-card {
+            transition: all 0.3s ease;
+            border: 1px solid #e5e7eb;
+        }
+        
+        .sensor-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            border-color: #3b82f6;
+        }
+        
+        .average-card {
+            transition: all 0.3s ease;
+            border: 1px solid #e5e7eb;
+            background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
+        }
+        
+        .average-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            border-color: #6366f1;
+        }
+        
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+        
+        .status-optimal {
+            background: rgba(34, 197, 94, 0.1);
+            color: rgb(34, 197, 94);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+        }
+        
+        .status-warning {
+            background: rgba(245, 158, 11, 0.1);
+            color: rgb(245, 158, 11);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+        
+        .status-critical {
+            background: rgba(239, 68, 68, 0.1);
+            color: rgb(239, 68, 68);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: #e5e7eb;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.3s ease;
+        }
+        
+        .tab-button {
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        
+        .tab-button.active {
+            background: #3b82f6;
+            color: white;
+        }
+        
+        .tab-button:not(.active) {
+            background: #f3f4f6;
+            color: #6b7280;
+        }
+        
+        .tab-button:not(.active):hover {
+            background: #e5e7eb;
+            color: #374151;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .live-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #10b981;
+            animation: pulse 2s infinite;
+        }
+        
+        .average-period-tab {
+            padding: 0.375rem 0.75rem;
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            border: 1px solid #e5e7eb;
+        }
+        
+        .average-period-tab.active {
+            background: #6366f1;
+            color: white;
+            border-color: #6366f1;
+        }
+        
+        .average-period-tab:not(.active) {
+            background: white;
+            color: #6b7280;
+        }
+        
+        .average-period-tab:not(.active):hover {
+            background: #f9fafb;
+            color: #374151;
+            border-color: #d1d5db;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .ping-animation {
+            animation: ping 0.8s ease-in-out;
+        }
+
+        @keyframes ping {
+            0% { transform: scale(1); background-color: #f87171; }
+            50% { transform: scale(1.3); background-color: #ef4444; }
+            100% { transform: scale(1); background-color: #f87171; }
+        }
+        
+        @media (max-width: 1024px) {
+            .sidebar {
+                transform: translateX(-100%);
+                z-index: 1000;
+            }
+            
+            .sidebar-open {
+                transform: translateX(0);
+            }
+            
+            .topbar {
+                left: 0 !important;
+            }
+            
+            .main-content {
+                margin-left: 0 !important;
+                width: 100% !important;
+            }
+            
+            .mobile-menu-button {
+                display: flex;
+            }
+        }
+        
+        @media (min-width: 1024px) {
+            .mobile-menu-button {
+                display: none;
+            }
+        }
+    </style>
+</head>
+
+<body onload="initializeMonitoring();" class="bg-gray-50 min-h-screen font-sans">
+
+    <!-- Sidebar -->
+    <div id="sidebar" class="sidebar fixed top-0 left-0 w-72 h-screen z-50 transition-transform duration-300">
+        <div class="p-6 border-b border-slate-600">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+                    <span class="text-xl">🦀</span>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+                        V-CRAB
+                    </h1>
+                    <p class="text-xs text-slate-400">Aquaculture System</p>
+                </div>
+            </div>
+        </div>
+
+        <nav class="mt-8 px-4">
+            <ul class="space-y-2">
+                <li>
+                    <a href="{{ url_for('dashboard') }}" class="nav-item flex items-center gap-3 px-4 py-3 text-slate-300 hover:text-white rounded-lg font-medium">
+                        <i class="fas fa-home w-4 h-4"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('monitoring') }}" class="nav-item active flex items-center gap-3 px-4 py-3 text-white rounded-lg font-medium">
+                        <i class="fas fa-desktop w-4 h-4"></i>
+                        <span>Monitoring</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('controls') }}" class="nav-item flex items-center gap-3 px-4 py-3 text-slate-300 hover:text-white rounded-lg font-medium">
+                        <i class="fas fa-sliders-h w-4 h-4"></i>
+                        <span>Controls</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('analytics') }}" class="nav-item flex items-center gap-3 px-4 py-3 text-slate-300 hover:text-white rounded-lg font-medium">
+                        <i class="fas fa-chart-line w-4 h-4"></i>
+                        <span>Analytics</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('inventory') }}" class="nav-item flex items-center gap-3 px-4 py-3 text-slate-300 hover:text-white rounded-lg font-medium">
+                        <i class="fas fa-warehouse w-4 h-4"></i>
+                        <span>Inventory</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('growth_monitoring') }}" class="nav-item flex items-center gap-3 px-4 py-3 text-slate-300 hover:text-white rounded-lg font-medium">
+                      <i class="fas fa-calendar-check w-4 h-4"></i>
+                      <span>Crab Growth Monitoring</span>
+                    </a>
+                  </li>
+                <li>
+                    <a href="{{ url_for('reports') }}" class="nav-item flex items-center gap-3 px-4 py-3 text-slate-300 hover:text-white rounded-lg font-medium">
+                        <i class="fas fa-file-alt w-4 h-4"></i>
+                        <span>Reports</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('notification') }}" class="nav-item flex items-center gap-3 px-4 py-3 text-slate-300 hover:text-white rounded-lg font-medium">
+                        <i class="fas fa-bell w-4 h-4"></i>
+                        <span>Notifications</span>
+                        <span id="sidebarNotifBadge" class="ml-auto text-xs px-2 py-1 bg-red-500 rounded-full text-white hidden">0</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+        
+        <div class="absolute bottom-8 left-4 right-4">
+            <button class="w-full bg-gradient-to-r from-red-500 to-red-600 text-white px-4 py-3 rounded-lg font-semibold hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 flex items-center justify-center gap-2" onclick="logout()">
+                <i class="fas fa-sign-out-alt"></i>
+                <span>Sign Out</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Top Navigation -->
+    <header class="topbar fixed top-0 right-0 h-16 z-40 flex items-center justify-between px-6 lg:left-72">
+        <div class="flex items-center gap-4">
+            <!-- Mobile Menu Button -->
+            <button id="mobileMenuButton" class="mobile-menu-button lg:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors duration-200">
+                <i class="fas fa-bars text-gray-600"></i>
+            </button>
+            
+            <h1 class="text-xl font-semibold text-gray-800">Real-Time Monitoring</h1>
+        </div>
+        
+        <div class="flex items-center gap-4">
+            <!-- Live Status -->
+            <div class="flex items-center gap-2 px-3 py-1 bg-green-50 rounded-full">
+                <div class="live-indicator"></div>
+                <span class="text-xs font-medium text-green-700" id="liveStatus">Live</span>
+            </div>
+
+            <!-- Notifications -->
+            <div class="relative">
+                <button onclick="toggleNotif()" id="notifBell" class="p-2 rounded-lg hover:bg-gray-100 transition-colors duration-200 relative">
+                    <i class="fas fa-bell text-gray-600"></i>
+                    <span id="notifCount" class="absolute -top-1 -right-1 bg-red-500 w-5 h-5 flex items-center justify-center text-xs text-white rounded-full hidden">0</span>
+                </button>
+                <div id="notifMenu" class="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-xl border border-gray-200 py-2 hidden z-50">
+                    <h3 class="px-4 py-2 text-gray-700 font-semibold border-b">Crab Environment Status</h3>
+                    <div id="notifList" class="max-h-64 overflow-y-auto px-4 py-2 text-sm text-gray-800 space-y-2">
+                        <p class="text-gray-500 italic text-center">Loading notifications...</p>
+                    </div>
+                    <hr class="my-1">
+                    <a href="{{ url_for('notification') }}" class="block px-4 py-2 text-blue-600 hover:bg-blue-50 text-center text-sm">View Full Report</a>
+                </div>
+            </div>
+
+            <!-- User Menu -->
+            <div class="relative">
+                <button class="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-100 transition-colors duration-200" onclick="toggleDropdown()">
+                    <img src="{{ url_for('static', filename='images/OIP.jpg') }}" alt="User Avatar" class="w-8 h-8 rounded-full border-2 border-blue-200">
+                    <div class="hidden md:block text-left">
+                        <p class="text-sm font-medium text-gray-800">{{ username }}</p>
+                        <p class="text-xs text-gray-500">Administrator</p>
+                    </div>
+                    <i class="fas fa-chevron-down text-xs text-gray-400 hidden md:block"></i>
+                </button>
+                
+                <div id="dropdownMenu" class="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-xl border border-gray-200 py-2 hidden z-50">
+                    <div class="px-4 py-2 border-b">
+                        <p class="text-sm font-medium text-gray-800">My Account</p>
+                    </div>
+                    <a href="{{ url_for('profile') }}" class="flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-gray-50 transition-colors duration-200">
+                        <i class="fas fa-user text-gray-400"></i>
+                        <span>Profile Settings</span>
+                    </a>
+                    <a href="{{ url_for('manage_users') }}" class="flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-gray-50 transition-colors duration-200">
+                        <i class="fas fa-users text-gray-400"></i>
+                        <span>Manage Users</span>
+                    </a>
+                    <hr class="my-1">
+                    <button onclick="logout()" class="flex items-center gap-3 px-4 py-2 text-red-600 hover:bg-red-50 transition-colors duration-200 w-full text-left">
+                        <i class="fas fa-sign-out-alt text-red-400"></i>
+                        <span>Sign Out</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Mobile Overlay -->
+    <div id="mobileOverlay" class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden lg:hidden" onclick="closeMobileMenu()"></div>
+
+    <!-- Main Content -->
+    <main id="mainContent" class="main-content-transition pt-20 pb-8 px-6 lg:ml-72">
+        <!-- Status Bar -->
+        <div class="mb-6 bg-white rounded-xl border border-gray-200 shadow-sm">
+            <div class="p-4">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                            <i class="fas fa-clock text-green-600"></i>
+                        </div>
+                        <div>
+                            <p class="font-semibold text-gray-900">System Status: Online</p>
+                            <p class="text-sm text-gray-600">Last updated: <span id="lastUpdate">--:--:--</span></p>
+                        </div>
+                    </div>
+                    <div class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium">
+                        All Sensors Active
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Current Readings -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <!-- Temperature Card -->
+            <div class="sensor-card bg-white rounded-xl p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 bg-red-50 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-thermometer-half text-red-500"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-sm font-medium text-gray-600">Temperature</h3>
+                        </div>
+                    </div>
+                    <span id="temp-status" class="status-badge">Checking...</span>
+                </div>
+                
+                <div class="mb-4">
+                    <div class="flex items-baseline gap-2">
+                        <span id="temperature" class="text-3xl font-bold text-gray-900">Loading...</span>
+                        <span class="text-sm text-gray-500">°C</span>
+                    </div>
+                    <div class="flex items-center justify-between text-xs text-gray-500 mt-2">
+                        <span>Range: 25-35°C</span>
+                        <div class="flex items-center gap-1">
+                            <i class="fas fa-trending-up"></i>
+                            <span>Live</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="progress-bar">
+                    <div id="temp-progress" class="progress-fill bg-red-500" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <!-- pH Level Card -->
+            <div class="sensor-card bg-white rounded-xl p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-flask text-blue-500"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-sm font-medium text-gray-600">pH Level</h3>
+                        </div>
+                    </div>
+                    <span id="ph-status" class="status-badge">Checking...</span>
+                </div>
+                
+                <div class="mb-4">
+                    <div class="flex items-baseline gap-2">
+                        <span id="ph_level" class="text-3xl font-bold text-gray-900">Loading...</span>
+                    </div>
+                    <div class="flex items-center justify-between text-xs text-gray-500 mt-2">
+                        <span>Range: 7.5-9.0</span>
+                        <div class="flex items-center gap-1">
+                            <i class="fas fa-trending-up"></i>
+                            <span>Live</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="progress-bar">
+                    <div id="ph-progress" class="progress-fill bg-blue-500" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <!-- TDS Value Card -->
+            <div class="sensor-card bg-white rounded-xl p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-tint text-green-500"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-sm font-medium text-gray-600">TDS Value</h3>
+                        </div>
+                    </div>
+                    <span id="tds-status" class="status-badge">Checking...</span>
+                </div>
+                
+                <div class="mb-4">
+                    <div class="flex items-baseline gap-2">
+                        <span id="tds_value" class="text-3xl font-bold text-gray-900">Loading...</span>
+                        <span class="text-sm text-gray-500">ppm</span>
+                    </div>
+                    <div class="flex items-center justify-between text-xs text-gray-500 mt-2">
+                        <span>Range: 50-1000ppm</span>
+                        <div class="flex items-center gap-1">
+                            <i class="fas fa-trending-up"></i>
+                            <span>Live</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="progress-bar">
+                    <div id="tds-progress" class="progress-fill bg-green-500" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <!-- Turbidity Card -->
+            <div class="sensor-card bg-white rounded-xl p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 bg-purple-50 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-eye text-purple-500"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-sm font-medium text-gray-600">Turbidity</h3>
+                        </div>
+                    </div>
+                    <span id="turbidity-status" class="status-badge">Checking...</span>
+                </div>
+                
+                <div class="mb-4">
+                    <div class="flex items-baseline gap-2">
+                        <span id="turbidity" class="text-3xl font-bold text-gray-900">Loading...</span>
+                        <span class="text-sm text-gray-500">NTU</span>
+                    </div>
+                    <div class="flex items-center justify-between text-xs text-gray-500 mt-2">
+                        <span>Range: 50-1000 NTU</span>
+                        <div class="flex items-center gap-1">
+                            <i class="fas fa-trending-up"></i>
+                            <span>Live</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="progress-bar">
+                    <div id="turbidity-progress" class="progress-fill bg-purple-500" style="width: 0%"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Average Values Section -->
+        <div class="bg-white rounded-xl border border-gray-200 shadow-sm mb-8">
+            <div class="p-6">
+                <div class="flex items-center justify-between mb-6">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 bg-indigo-50 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-chart-bar text-indigo-500"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-xl font-bold text-gray-900">Average Values</h2>
+                            <p class="text-sm text-gray-600">Historical parameter averages from database</p>
+                        </div>
+                    </div>
+                    <div class="flex gap-2">
+                        <button class="average-period-tab active" onclick="switchAveragePeriod('daily')">Daily</button>
+                        <button class="average-period-tab" onclick="switchAveragePeriod('weekly')">Weekly</button>
+                        <button class="average-period-tab" onclick="switchAveragePeriod('monthly')">Monthly</button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <!-- Average Temperature -->
+                    <div class="average-card rounded-lg p-4">
+                        <div class="flex items-center gap-3 mb-3">
+                            <div class="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-thermometer-half text-red-500 text-sm"></i>
+                            </div>
+                            <div>
+                                <h4 class="text-sm font-medium text-gray-700">Avg Temperature</h4>
+                                <p class="text-xs text-gray-500" id="temp-period">Last 24 hours</p>
+                            </div>
+                        </div>
+                        <div class="flex items-baseline gap-2 mb-2">
+                            <span id="avg-temperature" class="text-2xl font-bold text-gray-900">Loading...</span>
+                            <span class="text-sm text-gray-500">°C</span>
+                        </div>
+                        <div class="flex items-center gap-2 text-xs">
+                            <span class="text-gray-500">Min:</span>
+                            <span id="min-temperature" class="font-medium text-blue-600">--°C</span>
+                            <span class="text-gray-500">Max:</span>
+                            <span id="max-temperature" class="font-medium text-red-600">--°C</span>
+                        </div>
+                    </div>
+
+                    <!-- Average pH -->
+                    <div class="average-card rounded-lg p-4">
+                        <div class="flex items-center gap-3 mb-3">
+                            <div class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-flask text-blue-500 text-sm"></i>
+                            </div>
+                            <div>
+                                <h4 class="text-sm font-medium text-gray-700">Avg pH Level</h4>
+                                <p class="text-xs text-gray-500" id="ph-period">Last 24 hours</p>
+                            </div>
+                        </div>
+                        <div class="flex items-baseline gap-2 mb-2">
+                            <span id="avg-ph" class="text-2xl font-bold text-gray-900">Loading...</span>
+                        </div>
+                        <div class="flex items-center gap-2 text-xs">
+                            <span class="text-gray-500">Min:</span>
+                            <span id="min-ph" class="font-medium text-blue-600">--</span>
+                            <span class="text-gray-500">Max:</span>
+                            <span id="max-ph" class="font-medium text-red-600">--</span>
+                        </div>
+                    </div>
+
+                    <!-- Average TDS -->
+                    <div class="average-card rounded-lg p-4">
+                        <div class="flex items-center gap-3 mb-3">
+                            <div class="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-tint text-green-500 text-sm"></i>
+                            </div>
+                            <div>
+                                <h4 class="text-sm font-medium text-gray-700">Avg TDS Value</h4>
+                                <p class="text-xs text-gray-500" id="tds-period">Last 24 hours</p>
+                            </div>
+                        </div>
+                        <div class="flex items-baseline gap-2 mb-2">
+                            <span id="avg-tds" class="text-2xl font-bold text-gray-900">Loading...</span>
+                            <span class="text-sm text-gray-500">ppm</span>
+                        </div>
+                        <div class="flex items-center gap-2 text-xs">
+                            <span class="text-gray-500">Min:</span>
+                            <span id="min-tds" class="font-medium text-blue-600">--ppm</span>
+                            <span class="text-gray-500">Max:</span>
+                            <span id="max-tds" class="font-medium text-red-600">--ppm</span>
+                        </div>
+                    </div>
+
+                    <!-- Average Turbidity -->
+                    <div class="average-card rounded-lg p-4">
+                        <div class="flex items-center gap-3 mb-3">
+                            <div class="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-eye text-purple-500 text-sm"></i>
+                            </div>
+                            <div>
+                                <h4 class="text-sm font-medium text-gray-700">Avg Turbidity</h4>
+                                <p class="text-xs text-gray-500" id="turbidity-period">Last 24 hours</p>
+                            </div>
+                        </div>
+                        <div class="flex items-baseline gap-2 mb-2">
+                            <span id="avg-turbidity" class="text-2xl font-bold text-gray-900">Loading...</span>
+                            <span class="text-sm text-gray-500">NTU</span>
+                        </div>
+                        <div class="flex items-center gap-2 text-xs">
+                            <span class="text-gray-500">Min:</span>
+                            <span id="min-turbidity" class="font-medium text-blue-600">-- NTU</span>
+                            <span class="text-gray-500">Max:</span>
+                            <span id="max-turbidity" class="font-medium text-red-600">-- NTU</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Section -->
+        <div class="bg-white rounded-xl border border-gray-200 shadow-sm mb-8">
+            <div class="p-6">
+                <!-- Tab Navigation -->
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-xl font-bold text-gray-900">Live Charts</h2>
+                    <div class="flex gap-2">
+                        <button class="tab-button active" onclick="switchTab('all')">All Parameters</button>
+                        <button class="tab-button" onclick="switchTab('temperature')">Temperature</button>
+                        <button class="tab-button" onclick="switchTab('ph')">pH Level</button>
+                        <button class="tab-button" onclick="switchTab('tds')">TDS</button>
+                        <button class="tab-button" onclick="switchTab('turbidity')">Turbidity</button>
+                    </div>
+                </div>
+
+                <!-- Chart Container -->
+                <div class="h-96">
+                    <canvas id="mainChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- System Information -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Data Collection</h3>
+                <div class="space-y-3">
+                    <div class="flex justify-between">
+                        <span class="text-sm text-gray-600">Update Frequency</span>
+                        <span class="text-sm font-medium">3 seconds</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-sm text-gray-600">Data Points Today</span>
+                        <span class="text-sm font-medium" id="dataPointsCount">0</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-sm text-gray-600">Storage Used</span>
+                        <span class="text-sm font-medium">2.4 GB</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Sensor Health</h3>
+                <div class="space-y-3">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-thermometer-half text-red-500 w-4 h-4"></i>
+                            <span class="text-sm">ESP32_1 (Temp/pH)</span>
+                        </div>
+                        <span class="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">Online</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-tint text-green-500 w-4 h-4"></i>
+                            <span class="text-sm">ESP32_2 (TDS/Turbidity)</span>
+                        </div>
+                        <span class="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">Online</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">System Performance</h3>
+                <div class="space-y-3">
+                    <div class="flex justify-between">
+                        <span class="text-sm text-gray-600">Uptime</span>
+                        <span class="text-sm font-medium text-green-600">99.8%</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-sm text-gray-600">Response Time</span>
+                        <span class="text-sm font-medium">< 100ms</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-sm text-gray-600">Data Accuracy</span>
+                        <span class="text-sm font-medium text-green-600">99.9%</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-sm text-gray-600">Last Calibration</span>
+                        <span class="text-sm font-medium">2 days ago</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <audio id="notifSound" src="https://notificationsounds.com/storage/sounds/file-sounds-1150-pristine.mp3" preload="auto"></audio>
+
+    <script>
+        // Global variables
+        let isLiveMode = true;
+        let dataPointsToday = 0;
+        let mainChart;
+        let lastData = {};
+        let currentAveragePeriod = 'daily';
+        let socket;
+
+        // Initialize monitoring system
+        function initializeMonitoring() {
+            initializeChart();
+            fetchData();
+            fetchNotifications();
+            fetchAverageData();
+            startLiveUpdates();
+            updateLastUpdateTime();
+            initializeSocketIO();
+
+            // Fetch data every 3 seconds if live mode is on
+            setInterval(() => {
+                if (isLiveMode) {
+                    fetchData();
+                    updateLastUpdateTime();
+                }
+            }, 3000);
+
+            // Check for notifications every 10 seconds
+            setInterval(() => {
+                fetchNotifications(true);
+            }, 10000);
+
+            // Update average data every 5 minutes
+            setInterval(() => {
+                fetchAverageData();
+            }, 300000);
+        }
+
+        // Initialize Socket.IO for real-time notifications
+        function initializeSocketIO() {
+            socket = io();
+            
+            socket.on('new_notification', function(data) {
+                console.log('Real-time notification received:', data);
+                playNotifSound();
+                animateNotifBell();
+                
+                // Update notification count
+                fetchNotifications(true);
+            });
+            
+            socket.on('connect', function() {
+                console.log('Connected to server for real-time notifications');
+            });
+            
+            socket.on('disconnect', function() {
+                console.log('Disconnected from server');
+            });
+        }
+
+        // Update last update time
+        function updateLastUpdateTime() {
+            const now = new Date();
+            document.getElementById('lastUpdate').textContent = now.toLocaleTimeString();
+        }
+
+        // Fetch average data from database
+        function fetchAverageData() {
+            fetch(`/fetch_average_data?period=${currentAveragePeriod}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data) {
+                        updateAverageDisplay(data);
+                    }
+                })
+                .catch(error => {
+                    console.error("Error fetching average data:", error);
+                });
+        }
+
+        // Switch average period
+        function switchAveragePeriod(period) {
+            currentAveragePeriod = period;
+            
+            // Update tab buttons
+            document.querySelectorAll('.average-period-tab').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // Update period labels
+            const periodText = {
+                daily: 'Last 24 hours',
+                weekly: 'Last 7 days',
+                monthly: 'Last 30 days'
+            };
+            
+            document.getElementById('temp-period').textContent = periodText[period];
+            document.getElementById('ph-period').textContent = periodText[period];
+            document.getElementById('tds-period').textContent = periodText[period];
+            document.getElementById('turbidity-period').textContent = periodText[period];
+            
+            // Fetch new data for selected period
+            fetchAverageData();
+        }
+
+        // Update average display with fetched data
+        function updateAverageDisplay(data) {
+            // Update temperature averages
+            document.getElementById('avg-temperature').textContent = data.temperature.avg.toFixed(1);
+            document.getElementById('min-temperature').textContent = data.temperature.min.toFixed(1) + '°C';
+            document.getElementById('max-temperature').textContent = data.temperature.max.toFixed(1) + '°C';
+
+            // Update pH averages
+            document.getElementById('avg-ph').textContent = data.ph_level.avg.toFixed(1);
+            document.getElementById('min-ph').textContent = data.ph_level.min.toFixed(1);
+            document.getElementById('max-ph').textContent = data.ph_level.max.toFixed(1);
+
+            // Update TDS averages
+            document.getElementById('avg-tds').textContent = Math.round(data.tds_value.avg);
+            document.getElementById('min-tds').textContent = Math.round(data.tds_value.min) + 'ppm';
+            document.getElementById('max-tds').textContent = Math.round(data.tds_value.max) + 'ppm';
+
+            // Update turbidity averages
+            document.getElementById('avg-turbidity').textContent = data.turbidity.avg.toFixed(1);
+            document.getElementById('min-turbidity').textContent = data.turbidity.min.toFixed(1) + ' NTU';
+            document.getElementById('max-turbidity').textContent = data.turbidity.max.toFixed(1) + ' NTU';
+        }
+
+        // Initialize the chart
+        function initializeChart() {
+            const ctx = document.getElementById('mainChart').getContext('2d');
+            mainChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [
+                        {
+                            label: 'Temperature (°C)',
+                            borderColor: '#ef4444',
+                            backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                            data: [],
+                            fill: true,
+                            tension: 0.4,
+                            pointRadius: 3,
+                            borderWidth: 2
+                        },
+                        {
+                            label: 'pH Level',
+                            borderColor: '#3b82f6',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            data: [],
+                            fill: true,
+                            tension: 0.4,
+                            pointRadius: 3,
+                            borderWidth: 2
+                        },
+                        {
+                            label: 'TDS (ppm)',
+                            borderColor: '#10b981',
+                            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                            data: [],
+                            fill: true,
+                            tension: 0.4,
+                            pointRadius: 3,
+                            borderWidth: 2
+                        },
+                        {
+                            label: 'Turbidity (NTU)',
+                            borderColor: '#8b5cf6',
+                            backgroundColor: 'rgba(139, 92, 246, 0.1)',
+                            data: [],
+                            fill: true,
+                            tension: 0.4,
+                            pointRadius: 3,
+                            borderWidth: 2
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top',
+                            labels: {
+                                font: { weight: '600' },
+                                color: '#374151',
+                                usePointStyle: true,
+                                padding: 20
+                            }
+                        },
+                        tooltip: {
+                            mode: "index",
+                            intersect: false,
+                            backgroundColor: "rgba(0, 0, 0, 0.8)",
+                            titleColor: "#FFFFFF",
+                            bodyColor: "#FFFFFF",
+                            borderColor: "rgba(255, 255, 255, 0.2)",
+                            borderWidth: 1
+                        }
+                    },
+                    interaction: {
+                        mode: "nearest",
+                        intersect: false
+                    },
+                    scales: {
+                        x: {
+                            grid: { 
+                                color: "rgba(0, 0, 0, 0.1)",
+                                drawBorder: false
+                            },
+                            ticks: { 
+                                color: "#6B7280",
+                                font: { size: 12 }
+                            }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            grid: { 
+                                color: "rgba(0, 0, 0, 0.1)",
+                                drawBorder: false
+                            },
+                            ticks: { 
+                                color: "#6B7280",
+                                font: { size: 12 }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Fetch data (sensors) from the server - UPDATED for new table structure
+        function fetchData() {
+            fetch("/fetch_data")
+                .then(response => response.json())
+                .then(data => {
+                    if (data) {
+                        // Only update if the data is new
+                        if (JSON.stringify(data) !== JSON.stringify(lastData)) {
+                            lastData = data;
+                            updateUIWithNewData(data);
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error("Error fetching data:", error);
+                });
+        }
+
+        // Update UI with new data
+        function updateUIWithNewData(data) {
+            document.getElementById("temperature").innerText = data.temperature.toFixed(1);
+            document.getElementById("ph_level").innerText = data.ph_level.toFixed(1);
+            document.getElementById("tds_value").innerText = Math.round(data.tds_value);
+            document.getElementById("turbidity").innerText = data.turbidity.toFixed(1);
+
+            // Update progress bars
+            updateProgressBar('temp-progress', data.temperature, 24, 30);
+            updateProgressBar('ph-progress', data.ph_level, 7.0, 8.5);
+            updateProgressBar('tds-progress', data.tds_value, 400, 600);
+            updateProgressBar('turbidity-progress', data.turbidity, 0, 5);
+
+            // Update status badges
+            updateStatus('temp-status', data.temperature, 24, 30);
+            updateStatus('ph-status', data.ph_level, 7.0, 8.5);
+            updateStatus('tds-status', data.tds_value, 400, 600);
+            updateStatus('turbidity-status', data.turbidity, 0, 5);
+
+            // Update the chart data
+            const time = new Date().toLocaleTimeString();
+            mainChart.data.labels.push(time);
+            mainChart.data.datasets[0].data.push(data.temperature);
+            mainChart.data.datasets[1].data.push(data.ph_level);
+            mainChart.data.datasets[2].data.push(data.tds_value);
+            mainChart.data.datasets[3].data.push(data.turbidity);
+
+            // Keep only the last 20 data points
+            if (mainChart.data.labels.length > 20) {
+                mainChart.data.labels.shift();
+                mainChart.data.datasets.forEach(dataset => dataset.data.shift());
+            }
+
+            mainChart.update();
+
+            // Increment data points counter
+            dataPointsToday++;
+            document.getElementById("dataPointsCount").innerText = dataPointsToday.toLocaleString();
+        }
+
+        // Update progress bar
+        function updateProgressBar(elementId, value, min, max) {
+            const percentage = Math.min(Math.max(((value - min) / (max - min)) * 100, 0), 100);
+            document.getElementById(elementId).style.width = percentage + '%';
+        }
+
+        // Update individual status
+        function updateStatus(elementId, value, min, max) {
+            const element = document.getElementById(elementId);
+            element.className = 'status-badge ';
+            
+            if (value >= min && value <= max) {
+                element.className += 'status-optimal';
+                element.innerHTML = '<i class="fas fa-check-circle"></i> Optimal';
+            } else if (value < min * 0.9 || value > max * 1.1) {
+                element.className += 'status-critical';
+                element.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Critical';
+            } else {
+                element.className += 'status-warning';
+                element.innerHTML = '<i class="fas fa-exclamation-circle"></i> Warning';
+            }
+        }
+
+        // Start live updates (fetch data automatically)
+        function startLiveUpdates() {
+            setInterval(() => {
+                if (isLiveMode) {
+                    fetchData();
+                }
+            }, 3000); // Update every 3 seconds
+        }
+
+        // Switch chart tabs
+        function switchTab(tab) {
+            currentTab = tab;
+            
+            // Update tab buttons
+            document.querySelectorAll('.tab-button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // Show/hide datasets based on selected tab
+            mainChart.data.datasets.forEach((dataset, index) => {
+                if (tab === 'all') {
+                    dataset.hidden = false;
+                } else {
+                    const paramNames = ['temperature', 'ph', 'tds', 'turbidity'];
+                    dataset.hidden = paramNames[index] !== tab;
+                }
+            });
+            
+            mainChart.update();
+        }
+
+        // Mobile menu functionality
+        const mobileMenuButton = document.getElementById('mobileMenuButton');
+        const sidebar = document.getElementById('sidebar');
+        const mobileOverlay = document.getElementById('mobileOverlay');
+
+        mobileMenuButton.addEventListener('click', () => {
+            sidebar.classList.add('sidebar-open');
+            mobileOverlay.classList.remove('hidden');
+        });
+
+        function closeMobileMenu() {
+            sidebar.classList.remove('sidebar-open');
+            mobileOverlay.classList.add('hidden');
+        }
+
+        // Dropdown functionality
+        function toggleDropdown() {
+            const dropdown = document.getElementById('dropdownMenu');
+            dropdown.classList.toggle('hidden');
+        }
+
+        // Notification functionality
+        function toggleNotif() {
+            const notifMenu = document.getElementById("notifMenu");
+            const notifCount = document.getElementById("notifCount");
+            const sidebarBadge = document.getElementById("sidebarNotifBadge");
+            
+            notifMenu.classList.toggle("hidden");
+
+            if (!notifMenu.classList.contains("hidden")) {
+                hasUnreadNotifications = false;
+                notifCount.classList.add('hidden');
+                sidebarBadge.classList.add('hidden');
+                fetchNotifications();
+            }
+        }
+
+        function playNotifSound() {
+            const sound = document.getElementById("notifSound");
+            sound.play().catch(e => console.log("Audio play failed:", e));
+        }
+
+        function animateNotifBell() {
+            const bell = document.querySelector("#notifBell");
+            bell.classList.add("ping-animation");
+            setTimeout(() => bell.classList.remove("ping-animation"), 800);
+        }
+
+        // Fetch notifications
+        function fetchNotifications(realTime = false) {
+            fetch('/api/notifications')
+                .then(response => response.json())
+                .then(data => {
+                    const notifList = document.getElementById('notifList');
+                    const notifCount = document.getElementById('notifCount');
+                    const sidebarBadge = document.getElementById('sidebarNotifBadge');
+
+                    notifList.innerHTML = '';
+
+                    if (realTime) {
+                        if (data.length > lastNotifCount) {
+                            hasUnreadNotifications = true;
+                            notifCount.classList.remove('hidden');
+                            notifCount.innerText = data.length;
+                            sidebarBadge.classList.remove('hidden');
+                            sidebarBadge.innerText = data.length > 99 ? '99+' : data.length;
+                        }
+                    } else {
+                        if (hasUnreadNotifications) {
+                            notifCount.classList.remove('hidden');
+                            sidebarBadge.classList.remove('hidden');
+                        }
+                        notifCount.innerText = data.length;
+                        sidebarBadge.innerText = data.length > 99 ? '99+' : data.length;
+                    }
+
+                    lastNotifCount = data.length;
+
+                    if (data.length === 0) {
+                        notifList.innerHTML = '<p class="text-gray-500 italic text-center">No notifications available.</p>';
+                        return;
+                    }
+
+                    data.slice(0, 5).forEach(item => {
+                        const statusColor = item.status.toLowerCase() === 'safe' ? 'text-green-600' : 'text-red-600';
+                        const notifItem = `
+                            <div class="border-b pb-1">
+                                <p>🔔 <strong>${item.parameter}</strong>: 
+                                    <span class="${statusColor} font-medium">${item.value} - ${item.status}</span>
+                                </p>
+                                <p class="text-xs text-gray-500">${new Date(item.timestamp).toLocaleString()}</p>
+                            </div>
+                        `;
+                        notifList.innerHTML += notifItem;
+                    });
+                })
+                .catch(err => {
+                    console.error("Notification error:", err);
+                });
+        }
+
+        function logout() {
+            window.location.href = "/logout";
+        }
+
+        // Close dropdowns when clicking outside
+        document.addEventListener('click', function(event) {
+            const dropdown = document.getElementById('dropdownMenu');
+            const notifMenu = document.getElementById('notifMenu');
+            
+            if (!event.target.closest('.relative')) {
+                dropdown.classList.add('hidden');
+                notifMenu.classList.add('hidden');
+            }
+        });
+
+        // Initialize on page load
+        window.addEventListener('load', function() {
+            const notifCount = document.getElementById('notifCount');
+            const sidebarBadge = document.getElementById('sidebarNotifBadge');
+            notifCount.classList.add('hidden');
+            sidebarBadge.classList.add('hidden');
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,1218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Notifications - V-CRAB SYSTEM</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .sidebar-transition {
+      transition: transform 0.3s ease-in-out;
+    }
+    
+    .main-content-transition {
+      transition: margin-left 0.3s ease-in-out;
+    }
+    
+    .topbar {
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(248, 250, 252, 0.95));
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+    
+    .sidebar {
+      background: linear-gradient(180deg, #1e293b 0%, #334155 100%);
+      box-shadow: 4px 0 24px rgba(0, 0, 0, 0.15);
+    }
+    
+    .nav-item {
+      transition: all 0.2s ease-in-out;
+    }
+    
+    .nav-item:hover {
+      transform: translateX(4px);
+      background: rgba(59, 130, 246, 0.1);
+    }
+    
+    .nav-item.active {
+      background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    }
+    
+    .notification-card {
+      transition: all 0.3s ease;
+      border: 1px solid #e5e7eb;
+    }
+    
+    .notification-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    }
+    
+    .tab-button {
+      padding: 0.75rem 1.5rem;
+      border-radius: 0.5rem;
+      font-weight: 600;
+      transition: all 0.2s ease;
+      cursor: pointer;
+      border: 1px solid #e5e7eb;
+    }
+    
+    .tab-button.active {
+      background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+      color: white;
+      border-color: #3b82f6;
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    }
+    
+    .tab-button:not(.active) {
+      background: #f9fafb;
+      color: #6b7280;
+    }
+    
+    .tab-button:not(.active):hover {
+      background: #f3f4f6;
+      color: #374151;
+      border-color: #d1d5db;
+    }
+    
+    .tab-content {
+      display: none;
+    }
+    
+    .tab-content.active {
+      display: block;
+    }
+    
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(4px);
+    }
+    
+    .modal.show {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .modal-content {
+      background: white;
+      border-radius: 1rem;
+      padding: 2rem;
+      max-width: 500px;
+      width: 90%;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    }
+    
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 44px;
+      height: 24px;
+    }
+    
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #ccc;
+      transition: .4s;
+      border-radius: 24px;
+    }
+    
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .4s;
+      border-radius: 50%;
+    }
+    
+    input:checked + .slider {
+      background-color: #3b82f6;
+    }
+    
+    input:checked + .slider:before {
+      transform: translateX(20px);
+    }
+    
+    .toast {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 1100;
+      min-width: 300px;
+      padding: 1rem;
+      border-radius: 0.5rem;
+      color: white;
+      font-weight: 500;
+      transform: translateX(100%);
+      transition: transform 0.3s ease-in-out;
+    }
+    
+    .toast.show {
+      transform: translateX(0);
+    }
+    
+    .toast.success {
+      background: linear-gradient(135deg, #10b981, #059669);
+    }
+    
+    .toast.error {
+      background: linear-gradient(135deg, #ef4444, #dc2626);
+    }
+    
+    .toast.info {
+      background: linear-gradient(135deg, #3b82f6, #2563eb);
+    }
+    
+    .floating-particles {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      pointer-events: none;
+    }
+    
+    .particle {
+      position: absolute;
+      width: 4px;
+      height: 4px;
+      background: rgba(59, 130, 246, 0.3);
+      border-radius: 50%;
+      animation: float 8s infinite linear;
+    }
+    
+    @keyframes float {
+      0% { transform: translateY(100vh) rotate(0deg); opacity: 0; }
+      10% { opacity: 1; }
+      90% { opacity: 1; }
+      100% { transform: translateY(-100px) rotate(360deg); opacity: 0; }
+    }
+    
+    .ping-animation {
+      animation: ping 0.8s ease-in-out;
+    }
+
+    @keyframes ping {
+      0% { transform: scale(1); background-color: #f87171; }
+      50% { transform: scale(1.3); background-color: #ef4444; }
+      100% { transform: scale(1); background-color: #f87171; }
+    }
+    
+    @media (max-width: 1024px) {
+      .sidebar {
+        transform: translateX(-100%);
+        z-index: 1000;
+      }
+      
+      .sidebar-open {
+        transform: translateX(0);
+      }
+      
+      .topbar {
+        left: 0 !important;
+      }
+      
+      .main-content {
+        margin-left: 0 !important;
+        width: 100% !important;
+      }
+      
+      .mobile-menu-button {
+        display: flex;
+      }
+      
+      .tab-button {
+        padding: 0.5rem 1rem;
+        font-size: 0.875rem;
+      }
+    }
+    
+    @media (min-width: 1024px) {
+      .mobile-menu-button {
+        display: none;
+      }
+    }
+  </style>
+</head>
+
+<body onload="initializeNotifications();" class="bg-gray-50 min-h-screen">
+
+  <!-- Sidebar -->
+  <div id="sidebar" class="sidebar fixed top-0 left-0 w-72 h-screen z-50 transition-transform duration-300">
+    <div class="p-6 border-b border-slate-600">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+          <span class="text-xl">🦀</span>
+        </div>
+        <div>
+          <h1 class="text-xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+            V-CRAB
+          </h1>
+          <p class="text-xs text-slate-400">Aquaculture System</p>
+        </div>
+      </div>
+    </div>
+
+    <nav class="mt-8 px-4">
+      <ul class="space-y-2">
+        <li>
+          <a href="{{ url_for('dashboard') }}" class="nav-item flex items-center gap-3 px-4 py-3 text-slate-300 hover:text-white rounded-lg font-medium">
+            <i class="fas fa-home w-4 h-4"></i>
+            <span>Dashboard</span>
+          </a>
+        </li>
+        <li>
+          <a href="{{ url_for('monitoring') }}" class="nav-item flex items-center gap-3 px-4 py-3 text-slate-300 hover:text-white rounded-lg font-medium">
+            <i class="fas fa-desktop w-4 h-4"></i>
+            <span>Monitoring</span>
+          </a>
+        </li>
+        <li>
+          <a href="{{ url_for('controls') }}" class="nav-item flex items-center gap-3 px-4 py-3 text-slate-300 hover:text-white rounded-lg font-medium">
+            <i class="fas fa-sliders-h w-4 h-4"></i>
+            <span>Controls</span>
+          </a>
+        </li>
+        <li>
+          <a href="{{ url_for('analytics') }}" class="nav-item flex items-center gap-3 px-4 py-3 text-slate-300 hover:text-white rounded-lg font-medium">
+            <i class="fas fa-chart-line w-4 h-4"></i>
+            <span>Analytics</span>
+          </a>
+        </li>
+        <li>
+          <a href="{{ url_for('inventory') }}" class="nav-item flex items-center gap-3 px-4 py-3 text-slate-300 hover:text-white rounded-lg font-medium">
+            <i class="fas fa-warehouse w-4 h-4"></i>
+            <span>Inventory</span>
+          </a>
+        </li>
+        <li>
+          <a href="{{ url_for('growth_monitoring') }}" class="nav-item flex items-center gap-3 px-4 py-3 text-slate-300 hover:text-white rounded-lg font-medium">
+            <i class="fas fa-calendar-check w-4 h-4"></i>
+            <span>Crab Growth Monitoring</span>
+          </a>
+        </li>
+        <li>
+          <a href="{{ url_for('reports') }}" class="nav-item flex items-center gap-3 px-4 py-3 text-slate-300 hover:text-white rounded-lg font-medium">
+            <i class="fas fa-file-alt w-4 h-4"></i>
+            <span>Reports</span>
+          </a>
+        </li>
+        <li>
+          <a href="{{ url_for('notification') }}" class="nav-item active flex items-center gap-3 px-4 py-3 text-white rounded-lg font-medium">
+            <i class="fas fa-bell w-4 h-4"></i>
+            <span>Notifications</span>
+            <span id="sidebarNotifBadge" class="ml-auto text-xs px-2 py-1 bg-red-500 rounded-full text-white hidden">0</span>
+          </a>
+        </li>
+      </ul>
+    </nav>
+    
+    <div class="absolute bottom-8 left-4 right-4">
+      <button class="w-full bg-gradient-to-r from-red-500 to-red-600 text-white px-4 py-3 rounded-lg font-semibold hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 flex items-center justify-center gap-2" onclick="logout()">
+        <i class="fas fa-sign-out-alt"></i>
+        <span>Sign Out</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Top Navigation -->
+  <header class="topbar fixed top-0 right-0 h-16 z-40 flex items-center justify-between px-6 lg:left-72">
+    <div class="flex items-center gap-4">
+      <!-- Mobile Menu Button -->
+      <button id="mobileMenuButton" class="mobile-menu-button lg:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors duration-200">
+        <i class="fas fa-bars text-gray-600"></i>
+      </button>
+      
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
+          <i class="fas fa-bell text-white"></i>
+        </div>
+        <h1 class="text-xl font-semibold text-gray-800">Notifications</h1>
+      </div>
+    </div>
+    
+    <div class="flex items-center gap-4">
+      <!-- Unread Badge -->
+      <div id="unreadBadge" class="hidden px-3 py-1 bg-red-500 text-white rounded-full text-sm font-medium">
+        <span id="unreadBadgeCount">0</span> unread
+      </div>
+
+      <!-- Send Notification Button -->
+      <button onclick="openNotificationComposer()" class="px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-200 text-sm font-medium flex items-center gap-2">
+        <i class="fas fa-plus"></i>
+        <span>Send Notification</span>
+      </button>
+
+      <!-- User Menu -->
+      <div class="relative">
+        <button class="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-100 transition-colors duration-200" onclick="toggleDropdown()">
+          <img src="{{ url_for('static', filename='images/OIP.jpg') }}" alt="User Avatar" class="w-8 h-8 rounded-full border-2 border-blue-200">
+          <div class="hidden md:block text-left">
+            <p class="text-sm font-medium text-gray-800">{{ username }}</p>
+            <p class="text-xs text-gray-500">Administrator</p>
+          </div>
+          <i class="fas fa-chevron-down text-xs text-gray-400 hidden md:block"></i>
+        </button>
+        
+        <div id="dropdownMenu" class="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-xl border border-gray-200 py-2 hidden z-50">
+          <div class="px-4 py-2 border-b">
+            <p class="text-sm font-medium text-gray-800">My Account</p>
+          </div>
+          <a href="{{ url_for('profile') }}" class="flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-gray-50 transition-colors duration-200">
+            <i class="fas fa-user text-gray-400"></i>
+            <span>Profile Settings</span>
+          </a>
+          <a href="{{ url_for('manage_users') }}" class="flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-gray-50 transition-colors duration-200">
+            <i class="fas fa-users text-gray-400"></i>
+            <span>Manage Users</span>
+          </a>
+          <hr class="my-1">
+          <button onclick="logout()" class="flex items-center gap-3 px-4 py-2 text-red-600 hover:bg-red-50 transition-colors duration-200 w-full text-left">
+            <i class="fas fa-sign-out-alt text-red-400"></i>
+            <span>Sign Out</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Mobile Overlay -->
+  <div id="mobileOverlay" class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden lg:hidden" onclick="closeMobileMenu()"></div>
+
+  <!-- Main Content -->
+  <main id="mainContent" class="main-content-transition pt-20 pb-8 px-6 lg:ml-72 relative overflow-hidden">
+    <div class="floating-particles">
+      <div class="particle" style="left: 10%; animation-delay: 0s;"></div>
+      <div class="particle" style="left: 20%; animation-delay: 1s;"></div>
+      <div class="particle" style="left: 30%; animation-delay: 2s;"></div>
+      <div class="particle" style="left: 40%; animation-delay: 3s;"></div>
+      <div class="particle" style="left: 50%; animation-delay: 4s;"></div>
+      <div class="particle" style="left: 60%; animation-delay: 5s;"></div>
+      <div class="particle" style="left: 70%; animation-delay: 0.5s;"></div>
+      <div class="particle" style="left: 80%; animation-delay: 1.5s;"></div>
+      <div class="particle" style="left: 90%; animation-delay: 2.5s;"></div>
+    </div>
+
+    <!-- Header -->
+    <div class="mb-8">
+      <div class="flex items-center gap-4 mb-4">
+        <div class="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg">
+          <i class="fas fa-bell text-white text-2xl"></i>
+        </div>
+        <div>
+          <h1 class="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-2">
+            Notifications
+          </h1>
+          <p class="text-gray-600 text-lg">Manage alerts and communication settings for your aquaculture system</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabbed Interface -->
+    <div class="notification-card bg-white rounded-xl p-6 mb-8">
+      <!-- Tab Navigation -->
+      <div class="flex flex-wrap gap-2 mb-6 border-b border-gray-200 pb-4">
+        <button class="tab-button active" onclick="switchTab('notifications')">Notifications</button>
+        <button class="tab-button" onclick="switchTab('email')">Email Settings</button>
+        <button class="tab-button" onclick="switchTab('alerts')">Alert Rules</button>
+      </div>
+
+      <!-- Notifications Tab -->
+      <div id="notifications-tab" class="tab-content active">
+        <!-- Statistics Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div class="notification-card bg-white rounded-xl p-6 text-center border border-gray-200">
+            <div class="w-16 h-16 bg-gradient-to-br from-blue-400 to-blue-600 rounded-2xl mx-auto mb-4 flex items-center justify-center">
+              <i class="fas fa-bell text-white text-2xl"></i>
+            </div>
+            <h3 id="totalCount" class="text-3xl font-bold text-gray-800 mb-2">0</h3>
+            <p class="text-gray-600 font-medium">Total Notifications</p>
+          </div>
+          
+          <div class="notification-card bg-white rounded-xl p-6 text-center border border-gray-200">
+            <div class="w-16 h-16 bg-gradient-to-br from-red-400 to-red-600 rounded-2xl mx-auto mb-4 flex items-center justify-center">
+              <i class="fas fa-exclamation-circle text-white text-2xl"></i>
+            </div>
+            <h3 id="unreadCount" class="text-3xl font-bold text-gray-800 mb-2">0</h3>
+            <p class="text-gray-600 font-medium">Unread</p>
+          </div>
+          
+          <div class="notification-card bg-white rounded-xl p-6 text-center border border-gray-200">
+            <div class="w-16 h-16 bg-gradient-to-br from-amber-400 to-orange-600 rounded-2xl mx-auto mb-4 flex items-center justify-center">
+              <i class="fas fa-warning text-white text-2xl"></i>
+            </div>
+            <h3 id="criticalCount" class="text-3xl font-bold text-gray-800 mb-2">0</h3>
+            <p class="text-gray-600 font-medium">Critical</p>
+          </div>
+        </div>
+
+        <!-- Filter and Actions -->
+        <div class="notification-card bg-white rounded-xl p-4 mb-6 border border-gray-200">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-4">
+              <div class="flex items-center gap-2">
+                <i class="fas fa-filter text-gray-500"></i>
+                <select id="notificationFilter" onchange="filterNotifications(this.value)" class="border rounded-md px-3 py-1 text-sm">
+                  <option value="all">All Notifications</option>
+                  <option value="unread">Unread Only</option>
+                  <option value="critical">Critical</option>
+                  <option value="warning">Warning</option>
+                  <option value="info">Information</option>
+                </select>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <button onclick="markAllAsRead()" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200 text-sm font-medium flex items-center gap-2">
+                <i class="fas fa-check-double"></i>
+                <span>Mark All Read</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Notifications List -->
+        <div id="notifications-list" class="space-y-6">
+          <!-- Notifications will be populated here -->
+        </div>
+      </div>
+
+      <!-- Email Settings Tab -->
+      <div id="email-tab" class="tab-content">
+        <div class="notification-card bg-white rounded-xl p-6 border border-gray-200">
+          <div class="flex items-center gap-3 mb-6">
+            <i class="fas fa-envelope text-blue-600 text-xl"></i>
+            <div>
+              <h3 class="text-xl font-semibold text-gray-900">Email Notification Settings</h3>
+              <p class="text-gray-600">Configure email alerts and notification preferences</p>
+            </div>
+          </div>
+
+          <div class="space-y-6">
+            <!-- Enable Email Notifications -->
+            <div class="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+              <div>
+                <h4 class="font-medium text-gray-900">Enable Email Notifications</h4>
+                <p class="text-sm text-gray-600">Receive notifications via email</p>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="emailEnabled" checked>
+                <span class="slider"></span>
+              </label>
+            </div>
+
+            <!-- Email Address -->
+            <div>
+              <label for="emailAddress" class="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
+              <input type="email" id="emailAddress" value="admin@vcrab-system.com" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter your email address">
+            </div>
+
+            <!-- Alert Types -->
+            <div class="space-y-4">
+              <h4 class="font-medium text-gray-900">Alert Types</h4>
+
+              <div class="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                <div>
+                  <h5 class="font-medium text-gray-900">Critical Alerts</h5>
+                  <p class="text-sm text-gray-600">Immediate attention required</p>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="criticalAlerts" checked>
+                  <span class="slider"></span>
+                </label>
+              </div>
+
+              <div class="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                <div>
+                  <h5 class="font-medium text-gray-900">Warning Alerts</h5>
+                  <p class="text-sm text-gray-600">Parameters outside normal range</p>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="warningAlerts" checked>
+                  <span class="slider"></span>
+                </label>
+              </div>
+
+              <div class="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                <div>
+                  <h5 class="font-medium text-gray-900">Information Alerts</h5>
+                  <p class="text-sm text-gray-600">System updates and maintenance</p>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="infoAlerts">
+                  <span class="slider"></span>
+                </label>
+              </div>
+
+              <div class="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                <div>
+                  <h5 class="font-medium text-gray-900">Daily Report</h5>
+                  <p class="text-sm text-gray-600">Daily summary of system status</p>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="dailyReport" checked>
+                  <span class="slider"></span>
+                </label>
+              </div>
+            </div>
+
+            <button onclick="saveEmailSettings()" class="w-full px-4 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-200 font-medium flex items-center justify-center gap-2">
+              <i class="fas fa-save"></i>
+              <span>Save Email Settings</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Alert Rules Tab -->
+      <div id="alerts-tab" class="tab-content">
+        <div class="notification-card bg-white rounded-xl p-6 border border-gray-200">
+          <div class="mb-6">
+            <h3 class="text-xl font-semibold text-gray-900 mb-2">Alert Rules Configuration</h3>
+            <p class="text-gray-600">Set up custom alert rules and thresholds for different parameters</p>
+          </div>
+
+          <div class="space-y-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <!-- Temperature Alerts -->
+              <div class="space-y-4">
+                <h4 class="font-medium text-gray-900 flex items-center gap-2">
+                  <i class="fas fa-thermometer-half text-red-500"></i>
+                  Temperature Alerts
+                </h4>
+                <div class="space-y-3">
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Critical Low (°C)</label>
+                    <input type="number" id="tempCriticalLow" value="20" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  </div>
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Critical High (°C)</label>
+                    <input type="number" id="tempCriticalHigh" value="35" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  </div>
+                </div>
+              </div>
+
+              <!-- pH Level Alerts -->
+              <div class="space-y-4">
+                <h4 class="font-medium text-gray-900 flex items-center gap-2">
+                  <i class="fas fa-flask text-blue-500"></i>
+                  pH Level Alerts
+                </h4>
+                <div class="space-y-3">
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Critical Low</label>
+                    <input type="number" step="0.1" id="phCriticalLow" value="6.0" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  </div>
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Critical High</label>
+                    <input type="number" step="0.1" id="phCriticalHigh" value="9.0" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  </div>
+                </div>
+              </div>
+
+              <!-- TDS Alerts -->
+              <div class="space-y-4">
+                <h4 class="font-medium text-gray-900 flex items-center gap-2">
+                  <i class="fas fa-tint text-green-500"></i>
+                  TDS Alerts
+                </h4>
+                <div class="space-y-3">
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Critical Low (ppm)</label>
+                    <input type="number" id="tdsCriticalLow" value="300" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  </div>
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Critical High (ppm)</label>
+                    <input type="number" id="tdsCriticalHigh" value="700" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  </div>
+                </div>
+              </div>
+
+              <!-- Turbidity Alerts -->
+              <div class="space-y-4">
+                <h4 class="font-medium text-gray-900 flex items-center gap-2">
+                  <i class="fas fa-eye text-purple-500"></i>
+                  Turbidity Alerts
+                </h4>
+                <div class="space-y-3">
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Critical Low (NTU)</label>
+                    <input type="number" step="0.1" id="turbidityCriticalLow" value="0" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  </div>
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Critical High (NTU)</label>
+                    <input type="number" step="0.1" id="turbidityCriticalHigh" value="10" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <button onclick="saveAlertRules()" class="w-full px-4 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all duration-200 font-medium flex items-center justify-center gap-2">
+              <i class="fas fa-save"></i>
+              <span>Save Alert Rules</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Custom Notification Composer Modal -->
+  <div id="notificationModal" class="modal">
+    <div class="modal-content">
+      <div class="flex items-center justify-between mb-6">
+        <h2 class="text-2xl font-bold text-gray-900">Send Custom Notification</h2>
+        <button onclick="closeNotificationComposer()" class="text-gray-400 hover:text-gray-600">
+          <i class="fas fa-times text-xl"></i>
+        </button>
+      </div>
+      
+      <p class="text-gray-600 mb-6">Send a notification to system users or external recipients</p>
+      
+      <div class="space-y-4">
+        <div>
+          <label for="notificationTitle" class="block text-sm font-medium text-gray-700 mb-2">Title</label>
+          <input type="text" id="notificationTitle" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Notification title">
+        </div>
+        
+        <div>
+          <label for="notificationMessage" class="block text-sm font-medium text-gray-700 mb-2">Message</label>
+          <textarea id="notificationMessage" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Notification message"></textarea>
+        </div>
+        
+        <div>
+          <label for="notificationType" class="block text-sm font-medium text-gray-700 mb-2">Type</label>
+          <select id="notificationType" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <option value="info">Information</option>
+            <option value="warning">Warning</option>
+            <option value="critical">Critical</option>
+          </select>
+        </div>
+        
+        <div>
+          <label for="notificationRecipients" class="block text-sm font-medium text-gray-700 mb-2">Recipients (Email addresses)</label>
+          <input type="text" id="notificationRecipients" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="email1@example.com, email2@example.com">
+        </div>
+        
+        <div class="flex gap-3 pt-4">
+          <button onclick="sendCustomNotification()" class="flex-1 px-4 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-200 font-medium flex items-center justify-center gap-2">
+            <i class="fas fa-paper-plane"></i>
+            <span>Send Notification</span>
+          </button>
+          <button onclick="closeNotificationComposer()" class="px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200 font-medium">
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div id="toastContainer"></div>
+
+  <audio id="notificationSound" preload="auto">
+    <source src="/static/sounds/vcrabmp3.mp3" type="audio/mpeg">
+  </audio>
+
+  <script>
+    // Global variables
+    let currentTab = 'notifications';
+    let currentFilter = 'all';
+    let notifications = [];
+    let lastNotificationId = null;
+    let autoRefresh = true;
+
+    // Initialize notifications
+    function initializeNotifications() {
+      fetchNotifications();
+      
+      // Start auto-refresh
+      setInterval(() => {
+        if (autoRefresh) {
+          fetchNotifications();
+        }
+      }, 5000);
+    }
+
+    // Fetch notifications
+    async function fetchNotifications() {
+      try {
+        const response = await fetch('/api/notifications');
+        if (!response.ok) throw new Error('Failed to fetch notifications');
+        
+        const data = await response.json();
+        notifications = data;
+        
+        renderNotifications();
+        updateNotificationStats();
+        updateUnreadBadge();
+        
+        // Check for new notifications
+        if (data.length > 0 && data[0].id !== lastNotificationId) {
+          const hasNewCritical = data.some(n => n.id !== lastNotificationId && n.status.toLowerCase() === 'critical');
+          if (hasNewCritical || (lastNotificationId && data[0].id !== lastNotificationId)) {
+            playNotificationSound();
+          }
+          lastNotificationId = data[0].id;
+        }
+        
+      } catch (error) {
+        console.error('Error fetching notifications:', error);
+        showError('Failed to load notifications. Please try again.');
+      }
+    }
+
+    // Render notifications
+    function renderNotifications() {
+      let filtered = notifications;
+      
+      // Apply current filter
+      switch(currentFilter) {
+        case 'unread':
+          filtered = notifications.filter(n => !n.is_read);
+          break;
+        case 'critical':
+        case 'warning':
+        case 'info':
+          filtered = notifications.filter(n => n.status.toLowerCase() === currentFilter);
+          break;
+      }
+      
+      const container = document.getElementById('notifications-list');
+      
+      if (filtered.length === 0) {
+        container.innerHTML = `
+          <div class="notification-card bg-white rounded-xl p-8 text-center border border-gray-200">
+            <i class="fas fa-bell text-gray-400 text-4xl mb-4"></i>
+            <h3 class="text-lg font-semibold text-gray-900 mb-2">No notifications</h3>
+            <p class="text-gray-600">You're all caught up! No notifications match your current filter.</p>
+          </div>
+        `;
+        return;
+      }
+      
+      container.innerHTML = filtered.map(n => {
+        const colors = getNotificationColors(n.status);
+        return `
+          <div class="notification-card bg-white rounded-xl p-6 border-l-4 ${colors.border} ${!n.is_read ? 'shadow-md' : ''} border border-gray-200">
+            <div class="flex items-start justify-between">
+              <div class="flex items-start gap-3 flex-1">
+                <div class="w-10 h-10 bg-gradient-to-br ${colors.icon} rounded-lg flex items-center justify-center">
+                  <i class="${getNotificationIcon(n.status)} text-white"></i>
+                </div>
+                <div class="flex-1">
+                  <div class="flex items-center gap-2 mb-1">
+                    <h4 class="font-semibold text-gray-900">${n.parameter ? n.parameter.toUpperCase() + ' Alert' : n.title || 'System Alert'}</h4>
+                    ${!n.is_read ? '<span class="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">New</span>' : ''}
+                  </div>
+                  <p class="text-gray-700 mb-2">${n.message || n.advice || 'No message available'}</p>
+                  <div class="flex items-center gap-4 text-sm text-gray-500">
+                    <div class="flex items-center gap-1">
+                      <i class="fas fa-clock"></i>
+                      ${timeAgo(n.timestamp)}
+                    </div>
+                    ${n.parameter ? `<div>Parameter: ${n.parameter}</div>` : ''}
+                    ${n.value ? `<div>Value: ${formatParameterValue(n.parameter, n.value)}</div>` : ''}
+                  </div>
+                </div>
+              </div>
+              <div class="flex items-center gap-2">
+                ${!n.is_read ? `<button onclick="markAsRead(${n.id})" class="p-2 text-gray-400 hover:text-blue-600 transition-colors duration-200"><i class="fas fa-check"></i></button>` : ''}
+                <button onclick="deleteNotification(${n.id})" class="p-2 text-gray-400 hover:text-red-600 transition-colors duration-200"><i class="fas fa-trash"></i></button>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Update notification statistics
+    function updateNotificationStats() {
+      const total = notifications.length;
+      const critical = notifications.filter(n => n.status.toLowerCase() === 'critical').length;
+      const unread = notifications.filter(n => !n.is_read).length;
+      
+      document.getElementById('totalCount').textContent = total;
+      document.getElementById('criticalCount').textContent = critical;
+      document.getElementById('unreadCount').textContent = unread;
+    }
+
+    // Update unread badge
+    function updateUnreadBadge() {
+      const unread = notifications.filter(n => !n.is_read).length;
+      const badge = document.getElementById('unreadBadge');
+      const badgeCount = document.getElementById('unreadBadgeCount');
+      const sidebarBadge = document.getElementById('sidebarNotifBadge');
+      
+      if (unread > 0) {
+        badge.classList.remove('hidden');
+        badgeCount.textContent = unread;
+        sidebarBadge.classList.remove('hidden');
+        sidebarBadge.textContent = unread > 99 ? '99+' : unread;
+      } else {
+        badge.classList.add('hidden');
+        sidebarBadge.classList.add('hidden');
+      }
+    }
+
+    // Helper functions
+    function getNotificationColors(status) {
+      const colors = {
+        'critical': {
+          border: 'border-l-red-500',
+          icon: 'from-red-500 to-red-600'
+        },
+        'warning': {
+          border: 'border-l-yellow-500',
+          icon: 'from-yellow-500 to-orange-600'
+        },
+        'info': {
+          border: 'border-l-blue-500',
+          icon: 'from-blue-500 to-blue-600'
+        }
+      };
+      return colors[status.toLowerCase()] || colors.info;
+    }
+
+    function getNotificationIcon(status) {
+      const icons = {
+        'critical': 'fas fa-exclamation-triangle',
+        'warning': 'fas fa-exclamation-circle',
+        'info': 'fas fa-info-circle'
+      };
+      return icons[status.toLowerCase()] || 'fas fa-bell';
+    }
+
+    function formatParameterValue(parameter, value) {
+      if (!parameter || !value) return value;
+      
+      const units = {
+        'temperature': '°C',
+        'ph': '',
+        'tds': ' ppm',
+        'turbidity': ' NTU'
+      };
+      
+      const unit = units[parameter.toLowerCase()] || '';
+      return `${parseFloat(value).toFixed(2)}${unit}`;
+    }
+
+    function timeAgo(date) {
+      const seconds = Math.floor((new Date() - new Date(date)) / 1000);
+      const intervals = [
+        { label: 'year', seconds: 31536000 },
+        { label: 'month', seconds: 2592000 },
+        { label: 'week', seconds: 604800 },
+        { label: 'day', seconds: 86400 },
+        { label: 'hour', seconds: 3600 },
+        { label: 'minute', seconds: 60 },
+        { label: 'second', seconds: 1 }
+      ];
+      
+      for (const interval of intervals) {
+        const count = Math.floor(seconds / interval.seconds);
+        if (count > 0) {
+          return `${count} ${interval.label}${count !== 1 ? 's' : ''} ago`;
+        }
+      }
+      return "just now";
+    }
+
+    // Tab switching
+    function switchTab(tabName) {
+      currentTab = tabName;
+      
+      // Update tab buttons
+      document.querySelectorAll('.tab-button').forEach(btn => {
+        btn.classList.remove('active');
+      });
+      event.target.classList.add('active');
+      
+      // Update tab content
+      document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.remove('active');
+      });
+      document.getElementById(`${tabName}-tab`).classList.add('active');
+    }
+
+    // Filter notifications
+    function filterNotifications(filterType) {
+      currentFilter = filterType;
+      renderNotifications();
+    }
+
+    // Notification actions
+    async function markAsRead(id) {
+      try {
+        await fetch(`/api/notifications/${id}/read`, { method: 'POST' });
+        await fetchNotifications();
+        showToast('Notification marked as read', 'success');
+      } catch (error) {
+        console.error('Error marking notification as read:', error);
+        showToast('Failed to mark notification as read', 'error');
+      }
+    }
+
+    async function markAllAsRead() {
+      try {
+        await fetch('/api/notifications/mark-all-read', { method: 'POST' });
+        await fetchNotifications();
+        showToast('All notifications marked as read', 'success');
+      } catch (error) {
+        console.error('Error marking all notifications as read:', error);
+        showToast('Failed to mark all notifications as read', 'error');
+      }
+    }
+
+    async function deleteNotification(id) {
+      if (!confirm('Are you sure you want to delete this notification?')) {
+        return;
+      }
+      
+      try {
+        await fetch(`/api/notifications/${id}`, { method: 'DELETE' });
+        await fetchNotifications();
+        showToast('Notification deleted', 'success');
+      } catch (error) {
+        console.error('Error deleting notification:', error);
+        showToast('Failed to delete notification', 'error');
+      }
+    }
+
+    // Custom notification composer
+    function openNotificationComposer() {
+      document.getElementById('notificationModal').classList.add('show');
+    }
+
+    function closeNotificationComposer() {
+      document.getElementById('notificationModal').classList.remove('show');
+      // Clear form
+      document.getElementById('notificationTitle').value = '';
+      document.getElementById('notificationMessage').value = '';
+      document.getElementById('notificationType').value = 'info';
+      document.getElementById('notificationRecipients').value = '';
+    }
+
+    async function sendCustomNotification() {
+      const title = document.getElementById('notificationTitle').value;
+      const message = document.getElementById('notificationMessage').value;
+      const type = document.getElementById('notificationType').value;
+      const recipients = document.getElementById('notificationRecipients').value;
+
+      if (!title || !message) {
+        showToast('Please fill in all required fields', 'error');
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/notifications/send', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            title,
+            message,
+            type,
+            recipients: recipients.split(',').map(email => email.trim()).filter(email => email)
+          })
+        });
+
+        if (!response.ok) throw new Error('Failed to send notification');
+
+        closeNotificationComposer();
+        await fetchNotifications();
+        showToast('Custom notification sent successfully', 'success');
+      } catch (error) {
+        console.error('Error sending custom notification:', error);
+        showToast('Failed to send notification', 'error');
+      }
+    }
+
+    // Settings functions
+    async function saveEmailSettings() {
+      const settings = {
+        enabled: document.getElementById('emailEnabled').checked,
+        email: document.getElementById('emailAddress').value,
+        criticalAlerts: document.getElementById('criticalAlerts').checked,
+        warningAlerts: document.getElementById('warningAlerts').checked,
+        infoAlerts: document.getElementById('infoAlerts').checked,
+        dailyReport: document.getElementById('dailyReport').checked
+      };
+
+      try {
+        const response = await fetch('/api/settings/email', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(settings)
+        });
+
+        if (!response.ok) throw new Error('Failed to save email settings');
+
+        showToast('Email settings saved successfully', 'success');
+      } catch (error) {
+        console.error('Error saving email settings:', error);
+        showToast('Failed to save email settings', 'error');
+      }
+    }
+
+    async function saveAlertRules() {
+      const rules = {
+        temperature: {
+          criticalLow: parseFloat(document.getElementById('tempCriticalLow').value),
+          criticalHigh: parseFloat(document.getElementById('tempCriticalHigh').value)
+        },
+        ph: {
+          criticalLow: parseFloat(document.getElementById('phCriticalLow').value),
+          criticalHigh: parseFloat(document.getElementById('phCriticalHigh').value)
+        },
+        tds: {
+          criticalLow: parseFloat(document.getElementById('tdsCriticalLow').value),
+          criticalHigh: parseFloat(document.getElementById('tdsCriticalHigh').value)
+        },
+        turbidity: {
+          criticalLow: parseFloat(document.getElementById('turbidityCriticalLow').value),
+          criticalHigh: parseFloat(document.getElementById('turbidityCriticalHigh').value)
+        }
+      };
+
+      try {
+        const response = await fetch('/api/settings/alert-rules', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(rules)
+        });
+
+        if (!response.ok) throw new Error('Failed to save alert rules');
+
+        showToast('Alert rules saved successfully', 'success');
+      } catch (error) {
+        console.error('Error saving alert rules:', error);
+        showToast('Failed to save alert rules', 'error');
+      }
+    }
+
+    // Toast notifications
+    function showToast(message, type = 'info') {
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      toast.innerHTML = `
+        <div class="flex items-center justify-between">
+          <span>${message}</span>
+          <button onclick="this.parentElement.parentElement.remove()" class="ml-4 text-white hover:text-gray-200">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+      `;
+      
+      document.getElementById('toastContainer').appendChild(toast);
+      
+      // Show toast
+      setTimeout(() => toast.classList.add('show'), 100);
+      
+      // Auto remove after 5 seconds
+      setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 300);
+      }, 5000);
+    }
+
+    function showError(message) {
+      const container = document.getElementById('notifications-list');
+      container.innerHTML = `
+        <div class="notification-card bg-white rounded-xl p-6 border-l-4 border-l-red-500 border border-gray-200">
+          <div class="flex items-center gap-4">
+            <div class="w-12 h-12 bg-gradient-to-br from-red-500 to-red-600 rounded-xl flex items-center justify-center shadow-lg">
+              <i class="fas fa-exclamation-triangle text-white"></i>
+            </div>
+            <div>
+              <h3 class="text-xl font-bold text-gray-800 mb-1">System Error</h3>
+              <p class="text-gray-600">${message}</p>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function playNotificationSound() {
+      const audio = document.getElementById('notificationSound');
+      audio.play().catch(e => console.log('Could not play notification sound:', e));
+    }
+
+    // Mobile menu functionality
+    const mobileMenuButton = document.getElementById('mobileMenuButton');
+    const sidebar = document.getElementById('sidebar');
+    const mobileOverlay = document.getElementById('mobileOverlay');
+
+    mobileMenuButton.addEventListener('click', () => {
+      sidebar.classList.add('sidebar-open');
+      mobileOverlay.classList.remove('hidden');
+    });
+
+    function closeMobileMenu() {
+      sidebar.classList.remove('sidebar-open');
+      mobileOverlay.classList.add('hidden');
+    }
+
+    // Dropdown functionality
+    function toggleDropdown() {
+      const dropdown = document.getElementById('dropdownMenu');
+      dropdown.classList.toggle('hidden');
+    }
+
+    function logout() {
+      window.location.href = "/logout";
+    }
+
+    // Close dropdowns when clicking outside
+    document.addEventListener('click', function(event) {
+      const dropdown = document.getElementById('dropdownMenu');
+      
+      if (!event.target.closest('.relative')) {
+        dropdown.classList.add('hidden');
+      }
+    });
+
+    // Handle visibility change for auto-refresh
+    document.addEventListener('visibilitychange', () => {
+      autoRefresh = !document.hidden;
+    });
+
+    // Close modal when clicking outside
+    document.getElementById('notificationModal').addEventListener('click', function(event) {
+      if (event.target === this) {
+        closeNotificationComposer();
+      }
+    });
+  </script>
+</body>
+</html>

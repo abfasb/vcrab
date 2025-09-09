@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>vCRAB - Advanced Aquaculture Management System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'vcrab-blue': '#0ea5e9',
+                        'vcrab-dark': '#0f172a',
+                        'vcrab-light': '#f0f9ff',
+                        'vcrab-accent': '#06b6d4',
+                    },
+                    animation: {
+                        'float': 'float 6s ease-in-out infinite',
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'fade-in': 'fadeIn 0.5s ease-in-out',
+                        'slide-up': 'slideUp 0.6s ease-out',
+                    },
+                    keyframes: {
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0px)' },
+                            '50%': { transform: 'translateY(-20px)' },
+                        },
+                        fadeIn: {
+                            '0%': { opacity: '0' },
+                            '100%': { opacity: '1' },
+                        },
+                        slideUp: {
+                            '0%': { transform: 'translateY(30px)', opacity: '0' },
+                            '100%': { transform: 'translateY(0)', opacity: '1' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+
+<body class="bg-gradient-to-br from-vcrab-light to-white">
+    <!-- Navigation -->
+    <nav class="bg-white/90 backdrop-blur-md shadow-lg fixed w-full top-0 z-50 border-b border-vcrab-blue/10">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0 flex items-center">
+    <div class="relative mr-3">
+        <img src="{{ url_for('static', filename='images/vcrab_logo.png') }}" alt="vCRAB Logo" class="w-10 h-10 object-contain animate-float">
+    </div>
+    <h1 class="text-2xl font-bold bg-gradient-to-r from-vcrab-blue to-vcrab-accent bg-clip-text text-transparent">vCRAB</h1>
+</div>
+                    <div class="hidden md:block">
+                        <div class="ml-10 flex items-baseline space-x-4">
+                            <a href="#home" class="nav-link text-gray-900 hover:text-vcrab-blue px-3 py-2 rounded-md text-sm font-medium transition-all duration-300 hover:bg-vcrab-light">Home</a>
+                            <a href="#features" class="nav-link text-gray-500 hover:text-vcrab-blue px-3 py-2 rounded-md text-sm font-medium transition-all duration-300 hover:bg-vcrab-light">Features</a>
+                            <a href="#about" class="nav-link text-gray-500 hover:text-vcrab-blue px-3 py-2 rounded-md text-sm font-medium transition-all duration-300 hover:bg-vcrab-light">About</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="hidden md:block">
+                    <div class="ml-4 flex items-center md:ml-6 space-x-3">
+                        <a href="/login" class="text-gray-500 hover:text-vcrab-blue px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 hover:bg-vcrab-light">
+                            <i class="fas fa-sign-in-alt mr-2"></i>Sign In
+                        </a>
+                        <a href="/register" class="bg-gradient-to-r from-vcrab-blue to-vcrab-accent hover:from-vcrab-accent hover:to-vcrab-blue text-white px-6 py-2 rounded-lg text-sm font-medium transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl">
+                            <i class="fas fa-user-plus mr-2"></i>Get Started
+                        </a>
+                    </div>
+                </div>
+                <!-- Mobile menu button -->
+                <div class="md:hidden flex items-center">
+                    <button onclick="toggleMobileMenu()" class="text-gray-500 hover:text-gray-900 focus:outline-none focus:text-gray-900 p-2 rounded-lg hover:bg-vcrab-light transition-colors">
+                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <!-- Mobile menu -->
+        <div id="mobile-menu" class="md:hidden hidden bg-white/95 backdrop-blur-md border-t border-vcrab-blue/10">
+            <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+                <a href="#home" class="nav-link block text-gray-900 hover:text-vcrab-blue px-3 py-2 rounded-md text-base font-medium hover:bg-vcrab-light transition-colors">Home</a>
+                <a href="#features" class="nav-link block text-gray-500 hover:text-vcrab-blue px-3 py-2 rounded-md text-base font-medium hover:bg-vcrab-light transition-colors">Features</a>
+                <a href="#about" class="nav-link block text-gray-500 hover:text-vcrab-blue px-3 py-2 rounded-md text-base font-medium hover:bg-vcrab-light transition-colors">About</a>
+                <div class="pt-4 pb-3 border-t border-gray-200">
+                    <a href="/login" class="block w-full text-left text-gray-500 hover:text-vcrab-blue px-3 py-2 rounded-md text-base font-medium hover:bg-vcrab-light transition-colors">
+                        <i class="fas fa-sign-in-alt mr-2"></i>Sign In
+                    </a>
+                    <a href="/register" class="block w-full text-left bg-gradient-to-r from-vcrab-blue to-vcrab-accent text-white px-3 py-2 rounded-md text-base font-medium mt-2 hover:from-vcrab-accent hover:to-vcrab-blue transition-all">
+                        <i class="fas fa-user-plus mr-2"></i>Get Started
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="pt-16">
+        <!-- Home Section -->
+        <section id="home" class="section active">
+            <!-- Hero Section -->
+            <div class="relative bg-gradient-to-br from-vcrab-blue via-vcrab-accent to-blue-600 text-white overflow-hidden">
+                <!-- Background Pattern -->
+                <div class="absolute inset-0 opacity-10">
+                    <div class="absolute inset-0" style="background-image: url('data:image/svg+xml;charset=UTF-8,%3Csvg%20width%3D%2260%22%20height%3D%2260%22%20viewBox%3D%220%200%2060%2060%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cg%20fill%3D%22none%22%20fill-rule%3D%22evenodd%22%3E%3Cg%20fill%3D%22%23ffffff%22%20fill-opacity%3D%220.1%22%3E%3Ccircle%20cx%3D%2230%22%20cy%3D%2230%22%20r%3D%222%22%2F%3E%3C%2Fg%3E%3C%2Fg%3E%3C%2Fsvg%3E')"></div>
+                </div>
+                
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 relative">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+                        <div class="animate-slide-up">
+                            <div class="inline-flex items-center bg-white/10 backdrop-blur-sm rounded-full px-4 py-2 mb-6">
+                                <i class="fas fa-award text-yellow-300 mr-2"></i>
+                                <span class="text-sm font-medium">Mapalo Vertical Crab Farm</span>
+                            </div>
+                            <h1 class="text-4xl md:text-6xl font-bold mb-6 leading-tight">
+                                vCRAB: Vertical
+                                <span class="bg-gradient-to-r from-yellow-300 to-orange-300 bg-clip-text text-transparent">
+                                Crab Water Quality
+                                </span>
+                                Monitoring System
+                            </h1>
+                            <p class="text-xl mb-8 text-blue-100 leading-relaxed">
+                                vCRAB delivers cutting-edge IoT solutions for crab farming with real-time monitoring, 
+                                predictive analytics, and management systems that maximize yield and sustainability.
+                            </p>
+                            <div class="flex flex-col sm:flex-row gap-4">
+                                <a href="/register" class="bg-white text-vcrab-blue hover:bg-gray-100 px-8 py-4 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl flex items-center justify-center">
+                                    <i class="fas fa-rocket mr-2"></i>
+                                    Try System
+                                </a>
+                            </div>
+                            
+                            <!-- Stats -->
+                            <div class="grid grid-cols-3 gap-6 mt-12 pt-8 border-t border-white/20">
+                                <div class="text-center">
+                                    <div class="text-2xl font-bold text-yellow-300">1</div>
+                                    <div class="text-sm text-blue-100">Mapalo Vertical Crab Farm</div>
+                                </div>
+                                <div class="text-center">
+                                    <div class="text-2xl font-bold text-yellow-300">98%</div>
+                                    <div class="text-sm text-blue-100">Uptime</div>
+                                </div>
+                                <div class="text-center">
+                                    <div class="text-2xl font-bold text-yellow-300">24/7</div>
+                                    <div class="text-sm text-blue-100">Support</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="flex justify-center lg:justify-end animate-float">
+                            <div class="relative">
+                                <!-- Main Dashboard Mockup -->
+                                <div class="bg-white/10 backdrop-blur-lg rounded-2xl p-6 shadow-2xl border border-white/20">
+                                    <div class="bg-white rounded-xl p-4 shadow-lg">
+                                        <div class="flex items-center justify-between mb-4">
+                                            <h3 class="text-gray-800 font-semibold">Live Monitoring</h3>
+                                            <div class="flex items-center text-green-500">
+                                                <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse mr-2"></div>
+                                                <span class="text-sm">Online</span>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Mock Data Cards -->
+                                        <div class="grid grid-cols-2 gap-3 mb-4">
+                                            <div class="bg-blue-50 p-3 rounded-lg">
+                                                <div class="text-xs text-gray-600">Temperature</div>
+                                                <div class="text-lg font-bold text-blue-600">28.5°C</div>
+                                            </div>
+                                            <div class="bg-green-50 p-3 rounded-lg">
+                                                <div class="text-xs text-gray-600">pH Level</div>
+                                                <div class="text-lg font-bold text-green-600">7.2</div>
+                                            </div>
+                                            <div class="bg-purple-50 p-3 rounded-lg">
+                                                <div class="text-xs text-gray-600">TDS</div>
+                                                <div class="text-lg font-bold text-purple-600">450 ppm</div>
+                                            </div>
+                                            <div class="bg-orange-50 p-3 rounded-lg">
+                                                <div class="text-xs text-gray-600">Turbidity</div>
+                                                <div class="text-lg font-bold text-orange-600">2.1 NTU</div>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Mock Chart -->
+                                        <div class="bg-gray-50 h-20 rounded-lg flex items-end justify-center p-2">
+                                            <div class="flex items-end space-x-1">
+                                                <div class="w-2 bg-vcrab-blue h-8 rounded-t"></div>
+                                                <div class="w-2 bg-vcrab-blue h-12 rounded-t"></div>
+                                                <div class="w-2 bg-vcrab-blue h-6 rounded-t"></div>
+                                                <div class="w-2 bg-vcrab-blue h-16 rounded-t"></div>
+                                                <div class="w-2 bg-vcrab-blue h-10 rounded-t"></div>
+                                                <div class="w-2 bg-vcrab-blue h-14 rounded-t"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Floating Elements -->
+                                <div class="absolute -top-4 -right-4 bg-yellow-400 text-yellow-900 px-3 py-1 rounded-full text-xs font-bold animate-pulse-slow">
+                                    Predictive Analytics
+                                </div>
+                                <div class="absolute -bottom-4 -left-4 bg-green-400 text-green-900 px-3 py-1 rounded-full text-xs font-bold animate-pulse-slow">
+                                    Real-time
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Features Preview -->
+            <div class="py-24 bg-white">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div class="text-center mb-16 animate-fade-in">
+                        <h2 class="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+                            Why Choose <span class="text-vcrab-blue">vCRAB</span>?
+                        </h2>
+                        <p class="text-xl text-gray-600 max-w-3xl mx-auto">
+                            Real-time Water Quality Monitoring System with Predictive Analytics
+                        </p>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                        <div class="group text-center p-8 rounded-2xl hover:bg-vcrab-light transition-all duration-300 hover:shadow-lg hover:-translate-y-2">
+                            <div class="w-20 h-20 bg-gradient-to-r from-vcrab-blue to-vcrab-accent rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300">
+                                <i class="fas fa-chart-line text-white text-2xl"></i>
+                            </div>
+                            <h3 class="text-xl font-semibold mb-4 text-gray-900">Real-time Monitoring</h3>
+                            <p class="text-gray-600 leading-relaxed">
+                                Monitor water quality, temperature, pH levels, turbidity, and tds with advanced IoT sensors and instant alerts.
+                            </p>
+                        </div>
+                        
+                        <div class="group text-center p-8 rounded-2xl hover:bg-vcrab-light transition-all duration-300 hover:shadow-lg hover:-translate-y-2">
+                            <div class="w-20 h-20 bg-gradient-to-r from-green-500 to-emerald-500 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300">
+                                <i class="fas fa-brain text-white text-2xl"></i>
+                            </div>
+                            <h3 class="text-xl font-semibold mb-4 text-gray-900">Predictive Analytics</h3>
+                            <p class="text-gray-600 leading-relaxed">
+                                Leverage machine learning algorithms to predict water quality for crabs.
+                            </p>
+                        </div>
+                        
+                        <div class="group text-center p-8 rounded-2xl hover:bg-vcrab-light transition-all duration-300 hover:shadow-lg hover:-translate-y-2">
+                            <div class="w-20 h-20 bg-gradient-to-r from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300">
+                                <i class="fas fa-cogs text-white text-2xl"></i>
+                            </div>
+                            <h3 class="text-xl font-semibold mb-4 text-gray-900">Real-time Monitoring Alerts</h3>
+                            <p class="text-gray-600 leading-relaxed">
+                                Receive instant SMTP-based push notifications for critical crab farm conditions (water pH, temperature, turbidity, tds) — delivered directly to your email.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Features Section -->
+        <section id="features" class="section hidden">
+            <div class="py-24 bg-gradient-to-br from-gray-50 to-vcrab-light">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div class="text-center mb-16">
+                        <h2 class="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+                            Aquaculture <span class="text-vcrab-blue">Solution</span>
+                        </h2>
+                        <p class="text-xl text-gray-600 max-w-3xl mx-auto">
+                            From monitoring to management, vCRAB provides everything you need for successful crab farming.
+                        </p>
+                    </div>
+
+                    <!-- Feature Grid -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-16">
+                        <!-- Water Quality Monitoring -->
+                        <div class="bg-white rounded-2xl p-8 shadow-lg hover:shadow-xl transition-shadow duration-300">
+                            <div class="flex items-center mb-6">
+                                <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mr-4">
+                                    <i class="fas fa-tint text-blue-600 text-xl"></i>
+                                </div>
+                                <h3 class="text-2xl font-bold text-gray-900">Water Quality Monitoring</h3>
+                            </div>
+                            <p class="text-gray-600 mb-6">
+                                Continuous monitoring of critical water parameters including temperature, pH, 
+                                tds, and turbidity with instant alerts for any deviations.
+                            </p>
+                            <ul class="space-y-3">
+                                <li class="flex items-center text-gray-700">
+                                    <i class="fas fa-check-circle text-green-500 mr-3"></i>
+                                    Real-time sensor data collection
+                                </li>
+                                <li class="flex items-center text-gray-700">
+                                    <i class="fas fa-check-circle text-green-500 mr-3"></i>
+                                    Automated alert system
+                                </li>
+                                <li class="flex items-center text-gray-700">
+                                    <i class="fas fa-check-circle text-green-500 mr-3"></i>
+                                    Historical data analysis
+                                </li>
+                            </ul>
+                        </div>
+
+                        <!-- Inventory Management -->
+                        <div class="bg-white rounded-2xl p-8 shadow-lg hover:shadow-xl transition-shadow duration-300">
+                            <div class="flex items-center mb-6">
+                                <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center mr-4">
+                                    <i class="fas fa-boxes text-green-600 text-xl"></i>
+                                </div>
+                                <h3 class="text-2xl font-bold text-gray-900">Crab Inventory</h3>
+                            </div>
+                            <p class="text-gray-600 mb-6">
+                                Comprehensive inventory management system for tracking crab populations, growth rates, and harvest schedules.
+                            </p>
+                            <ul class="space-y-3">
+                                <li class="flex items-center text-gray-700">
+                                    <i class="fas fa-check-circle text-green-500 mr-3"></i>
+                                    Batch tracking and management
+                                </li>
+                                <li class="flex items-center text-gray-700">
+                                    <i class="fas fa-check-circle text-green-500 mr-3"></i>
+                                    Growth monitoring
+                                </li>
+                                <li class="flex items-center text-gray-700">
+                                    <i class="fas fa-check-circle text-green-500 mr-3"></i>
+                                    Harvest optimization
+                                </li>
+                            </ul>
+                        </div>
+
+                        <!-- Predictive Analytics -->
+                        <div class="bg-white rounded-2xl p-8 shadow-lg hover:shadow-xl transition-shadow duration-300">
+                            <div class="flex items-center mb-6">
+                                <div class="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center mr-4">
+                                    <i class="fas fa-chart-bar text-purple-600 text-xl"></i>
+                                </div>
+                                <h3 class="text-2xl font-bold text-gray-900">Predictive Analytics</h3>
+                            </div>
+                            <p class="text-gray-600 mb-6">
+                                Advanced machine learning algorithms analyze historical data to predict optimal conditions and prevent issues.
+                            </p>
+                            <ul class="space-y-3">
+                                <li class="flex items-center text-gray-700">
+                                    <i class="fas fa-check-circle text-green-500 mr-3"></i>
+                                    Machine learning algorithms
+                                </li>
+                                <li class="flex items-center text-gray-700">
+                                    <i class="fas fa-check-circle text-green-500 mr-3"></i>
+                                    Risk assessment
+                                </li>
+                            </ul>
+                        </div>
+
+                        <!-- Remote Control -->
+                        <div class="bg-white rounded-2xl p-8 shadow-lg hover:shadow-xl transition-shadow duration-300">
+                            <div class="flex items-center mb-6">
+                                <div class="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center mr-4">
+                                    <i class="fas fa-mobile-alt text-orange-600 text-xl"></i>
+                                </div>
+                                <h3 class="text-2xl font-bold text-gray-900">Sensors Control</h3>
+                            </div>
+                            <p class="text-gray-600 mb-6">
+                                Real-time water quality monitoring system through our web dashboard.
+                            </p>
+                            <ul class="space-y-3">
+                                <li class="flex items-center text-gray-700">
+                                    <i class="fas fa-check-circle text-green-500 mr-3"></i>
+                                    Web control
+                                </li>
+                                <li class="flex items-center text-gray-700">
+                                    <i class="fas fa-check-circle text-green-500 mr-3"></i>
+                                    Sensors Adjustment Value
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Technology Stack -->
+                    <div class="bg-white rounded-2xl p-8 shadow-lg">
+                        <h3 class="text-2xl font-bold text-center text-gray-900 mb-8">Powered by Advanced Technology</h3>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-8">
+                            <div class="text-center">
+                                <div class="w-16 h-16 bg-blue-100 rounded-xl flex items-center justify-center mx-auto mb-4">
+                                    <i class="fas fa-wifi text-blue-600 text-2xl"></i>
+                                </div>
+                                <h4 class="font-semibold text-gray-900">IoT Sensors</h4>
+                                <p class="text-sm text-gray-600 mt-2">Advanced sensors</p>
+                            </div>
+                            <div class="text-center">
+                                <div class="w-16 h-16 bg-purple-100 rounded-xl flex items-center justify-center mx-auto mb-4">
+                                    <i class="fas fa-robot text-purple-600 text-2xl"></i>
+                                </div>
+                                <h4 class="font-semibold text-gray-900">ML</h4>
+                                <p class="text-sm text-gray-600 mt-2">Machine learning models</p>
+                            </div>
+                            <div class="text-center">
+                                <div class="w-16 h-16 bg-green-100 rounded-xl flex items-center justify-center mx-auto mb-4">
+                                    <i class="fas fa-server text-green-600 text-2xl"></i>
+                                </div>
+                                <h4 class="font-semibold text-gray-900">Laragon Server</h4>
+                                <p class="text-sm text-gray-600 mt-2">mySQL</p>
+                            </div>
+                            <div class="text-center">
+                                <div class="w-16 h-16 bg-orange-100 rounded-xl flex items-center justify-center mx-auto mb-4">
+                                    <i class="fas fa-mobile-alt text-orange-600 text-2xl"></i>
+                                </div>
+                                <h4 class="font-semibold text-gray-900">Web App</h4>
+                                <p class="text-sm text-gray-600 mt-2">Web application</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- About Section -->
+        <section id="about" class="section hidden">
+            <div class="py-24 bg-white">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div class="text-center mb-16">
+                        <h2 class="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+                            About <span class="text-vcrab-blue">vCRAB</span>
+                        </h2>
+                        <p class="text-xl text-gray-600 max-w-3xl mx-auto">
+                            Leading the revolution in smart aquaculture with innovative technology and sustainable practices.
+                        </p>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center mb-16">
+                        <div>
+                            <h3 class="text-2xl font-bold text-gray-900 mb-6">Our Mission</h3>
+                            <p class="text-gray-600 mb-6 leading-relaxed">
+                                At vCRAB, we are committed to revolutionizing aquaculture through innovative IoT and 
+                                sustainable practices. Our mission is to empower crab farmers with 
+                                the tools they need to maximize productivity while maintaining environmental responsibility.
+                            </p>
+                            <div class="flex items-center space-x-4">
+                                <div class="flex items-center">
+                                    <i class="fas fa-award text-yellow-500 mr-2"></i>
+                                    <span class="text-sm font-medium text-gray-700">ISO STANDARD 25010</span>
+                                </div>
+                                <div class="flex items-center">
+                                    <i class="fas fa-leaf text-green-500 mr-2"></i>
+                                    <span class="text-sm font-medium text-gray-700">Eco-Friendly</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-gradient-to-br from-vcrab-light to-white p-8 rounded-2xl shadow-lg">
+                            <h4 class="text-xl font-semibold mb-6 text-gray-900">Our Expertise</h4>
+                            <div class="space-y-4">
+                                <div class="flex items-center">
+                                    <div class="w-8 h-8 bg-vcrab-blue rounded-lg flex items-center justify-center mr-4">
+                                        <i class="fas fa-check text-white text-sm"></i>
+                                    </div>
+                                    <span class="text-gray-700">Vertical Crab RAS</span>
+                                </div>
+                                <div class="flex items-center">
+                                    <div class="w-8 h-8 bg-vcrab-blue rounded-lg flex items-center justify-center mr-4">
+                                        <i class="fas fa-check text-white text-sm"></i>
+                                    </div>
+                                    <span class="text-gray-700">IoT Sensors</span>
+                                </div>
+                                <div class="flex items-center">
+                                    <div class="w-8 h-8 bg-vcrab-blue rounded-lg flex items-center justify-center mr-4">
+                                        <i class="fas fa-check text-white text-sm"></i>
+                                    </div>
+                                    <span class="text-gray-700">Predictive Analytics</span>
+                                </div>
+                                <div class="flex items-center">
+                                    <div class="w-8 h-8 bg-vcrab-blue rounded-lg flex items-center justify-center mr-4">
+                                        <i class="fas fa-check text-white text-sm"></i>
+                                    </div>
+                                    <span class="text-gray-700">Web Applications</span>
+                                </div>
+                                <div class="flex items-center">
+                                    <div class="w-8 h-8 bg-vcrab-blue rounded-lg flex items-center justify-center mr-4">
+                                        <i class="fas fa-check text-white text-sm"></i>
+                                    </div>
+                                    <span class="text-gray-700">24/7 Technical Support</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Stats Section -->
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-8 mb-16">
+                        <div class="text-center p-6 bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl">
+                            <div class="text-4xl font-bold text-purple-600 mb-2">98%</div>
+                            <div class="text-gray-600 font-medium">System Uptime</div>
+                            <div class="text-sm text-gray-500 mt-1">Guaranteed</div>
+                        </div>
+                        <div class="text-center p-6 bg-gradient-to-br from-blue-50 to-cyan-50 rounded-2xl">
+                            <div class="text-4xl font-bold text-blue-600 mb-2">1</div>
+                            <div class="text-gray-600 font-medium">Active Farm</div>
+                            <div class="text-sm text-gray-500 mt-1">Mapalo Vertical</div>
+                        </div>
+                        <div class="text-center p-6 bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl">
+                            <div class="text-4xl font-bold text-green-600 mb-2">100%</div>
+                            <div class="text-gray-600 font-medium">Satisfaction</div>
+                            <div class="text-sm text-gray-500 mt-1">Customer Rating</div>
+                        </div>
+                        <div class="text-center p-6 bg-gradient-to-br from-orange-50 to-yellow-50 rounded-2xl">
+                            <div class="text-4xl font-bold text-orange-600 mb-2">24/7</div>
+                            <div class="text-gray-600 font-medium">Support</div>
+                            <div class="text-sm text-gray-500 mt-1">vCRAB Team</div>
+                        </div>
+                    </div>
+
+                    <!-- Team Section -->
+                    <div class="text-center">
+                        <h3 class="text-2xl font-bold text-gray-900 mb-8">Meet Our vCRAB Team</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                            <div class="bg-white p-6 rounded-2xl shadow-lg hover:shadow-xl transition-shadow duration-300">
+                                <div class="w-20 h-20 bg-gradient-to-r from-vcrab-blue to-vcrab-accent rounded-full mx-auto mb-4 flex items-center justify-center">
+                                    <i class="fas fa-user text-white text-2xl"></i>
+                                </div>
+                                <h4 class="font-semibold text-gray-900 mb-2">Kate U. Icalla</h4>
+                                <p class="text-vcrab-blue text-sm mb-3">Capstone Leader-Programmer</p>
+                                <p class="text-gray-600 text-sm">BSIT 3-F3</p>
+                            </div>
+                            <div class="bg-white p-6 rounded-2xl shadow-lg hover:shadow-xl transition-shadow duration-300">
+                                <div class="w-20 h-20 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full mx-auto mb-4 flex items-center justify-center">
+                                    <i class="fas fa-user text-white text-2xl"></i>
+                                </div>
+                                <h4 class="font-semibold text-gray-900 mb-2">Mark Gabriel G. Baje</h4>
+                                <p class="text-green-600 text-sm mb-3">Hardware Specialist</p>
+                                <p class="text-gray-600 text-sm">BSIT 3-F3</p>
+                            </div>
+                            <div class="bg-white p-6 rounded-2xl shadow-lg hover:shadow-xl transition-shadow duration-300">
+                                <div class="w-20 h-20 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full mx-auto mb-4 flex items-center justify-center">
+                                    <i class="fas fa-user text-white text-2xl"></i>
+                                </div>
+                                <h4 class="font-semibold text-gray-900 mb-2">Jenny Laica M. Guerra</h4>
+                                <p class="text-purple-600 text-sm mb-3">Document Specialist</p>
+                                <p class="text-gray-600 text-sm">BSIT 3-F3</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-vcrab-dark text-white">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+                <div class="col-span-1 md:col-span-2">
+                    <div class="flex items-center mb-6">
+                        <div class="w-10 h-10 bg-gradient-to-r from-vcrab-blue to-vcrab-accent rounded-full flex items-center justify-center mr-3">
+                            <i class="fas fa-water text-white text-lg"></i>
+                        </div>
+                        <h3 class="text-2xl font-bold bg-gradient-to-r from-vcrab-blue to-vcrab-accent bg-clip-text text-transparent">vCRAB</h3>
+                    </div>
+                    <p class="text-gray-300 mb-6 leading-relaxed max-w-md">
+                        Revolutionizing aquaculture with smart IoT solutions for sustainable crab farming. 
+                        Monitor, analyze, and optimize your farm operations with cutting-edge technology.
+                    </p>
+                    <div class="flex space-x-4">
+                        <a href="#" class="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center hover:bg-vcrab-blue transition-colors">
+                            <i class="fab fa-facebook-f text-sm"></i>
+                        </a>
+                        <a href="#" class="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center hover:bg-vcrab-blue transition-colors">
+                            <i class="fab fa-twitter text-sm"></i>
+                        </a>
+                        <a href="#" class="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center hover:bg-vcrab-blue transition-colors">
+                            <i class="fab fa-linkedin-in text-sm"></i>
+                        </a>
+                        <a href="#" class="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center hover:bg-vcrab-blue transition-colors">
+                            <i class="fab fa-instagram text-sm"></i>
+                        </a>
+                    </div>
+                </div>
+                
+                <div>
+                    <h4 class="font-semibold mb-6 text-white">Quick Links</h4>
+                    <ul class="space-y-3">
+                        <li><a href="#home" class="text-gray-300 hover:text-vcrab-blue transition-colors flex items-center"><i class="fas fa-chevron-right mr-2 text-xs"></i>Home</a></li>
+                        <li><a href="#features" class="text-gray-300 hover:text-vcrab-blue transition-colors flex items-center"><i class="fas fa-chevron-right mr-2 text-xs"></i>Features</a></li>
+                        <li><a href="#about" class="text-gray-300 hover:text-vcrab-blue transition-colors flex items-center"><i class="fas fa-chevron-right mr-2 text-xs"></i>About</a></li>
+                    </ul>
+                </div>
+                
+                <div>
+                    <h4 class="font-semibold mb-6 text-white">Solutions</h4>
+                    <ul class="space-y-3">
+                        <li><span class="text-gray-300 flex items-center"><i class="fas fa-tint mr-2 text-vcrab-blue"></i>Water Quality Monitoring</span></li>
+                        <li><span class="text-gray-300 flex items-center"><i class="fas fa-chart-bar mr-2 text-vcrab-blue"></i>Predictive Analytics</span></li>
+                        <li><span class="text-gray-300 flex items-center"><i class="fas fa-boxes mr-2 text-vcrab-blue"></i>Inventory Management</span></li>
+                        <li><span class="text-gray-300 flex items-center"><i class="fas fa-mobile-alt mr-2 text-vcrab-blue"></i>Adjustment Sensor Control</span></li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+                <div>
+                    <h4 class="font-semibold mb-6 text-white">Contact Info</h4>
+                    <ul class="space-y-3 text-gray-300">
+                        <li class="flex items-start">
+                            <i class="fas fa-map-marker-alt mr-3 text-vcrab-blue mt-1"></i>
+                            <span>Vertical Crab RAS<br>Mapalo Vertical Crab Farm<br>San Carlos, Naujan</span>
+                        </li>
+                        <li class="flex items-center">
+                            <i class="fas fa-phone mr-3 text-vcrab-blue"></i>
+                            <span>+1 (555) 827-2201</span>
+                        </li>
+                        <li class="flex items-center">
+                            <i class="fas fa-envelope mr-3 text-vcrab-blue"></i>
+                            <span>info@vcrab.com</span>
+                        </li>
+                    </ul>
+                </div>
+                
+                <div>
+                    <h4 class="font-semibold mb-6 text-white">Newsletter</h4>
+                    <p class="text-gray-300 mb-4">Stay updated with the latest aquaculture innovations and vCRAB news.</p>
+                    <div class="flex">
+                        <input type="email" placeholder="Enter your email" class="flex-1 px-4 py-2 rounded-l-lg bg-white/10 border border-white/20 text-white placeholder-gray-400 focus:outline-none focus:border-vcrab-blue">
+                        <button class="px-6 py-2 bg-gradient-to-r from-vcrab-blue to-vcrab-accent rounded-r-lg hover:from-vcrab-accent hover:to-vcrab-blue transition-all">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="border-t border-gray-700 pt-8 text-center">
+                <div class="flex flex-col md:flex-row justify-between items-center">
+                    <p class="text-gray-300 mb-4 md:mb-0">
+                        &copy; 2024 vCRAB Technologies. All rights reserved.
+                    </p>
+                    <div class="flex space-x-6 text-sm">
+                        <a href="#" class="text-gray-300 hover:text-vcrab-blue transition-colors">Privacy Policy</a>
+                        <a href="#" class="text-gray-300 hover:text-vcrab-blue transition-colors">Terms of Service</a>
+                        <a href="#" class="text-gray-300 hover:text-vcrab-blue transition-colors">Cookie Policy</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Navigation functionality
+        function scrollToSection(sectionId) {
+            const sections = document.querySelectorAll('.section');
+            const navLinks = document.querySelectorAll('.nav-link');
+            
+            sections.forEach(section => {
+                section.classList.add('hidden');
+                section.classList.remove('active');
+            });
+            
+            navLinks.forEach(link => {
+                link.classList.remove('text-gray-900');
+                link.classList.add('text-gray-500');
+            });
+            
+            const targetSection = document.getElementById(sectionId);
+            if (targetSection) {
+                targetSection.classList.remove('hidden');
+                targetSection.classList.add('active');
+            }
+            
+            const activeLinks = document.querySelectorAll(`a[href="#${sectionId}"]`);
+            activeLinks.forEach(activeLink => {
+                activeLink.classList.remove('text-gray-500');
+                activeLink.classList.add('text-gray-900');
+            });
+            
+            // Close mobile menu if open
+            document.getElementById('mobile-menu').classList.add('hidden');
+        }
+
+        // Add click event listeners to navigation links
+        document.querySelectorAll('.nav-link').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const sectionId = link.getAttribute('href').substring(1);
+                scrollToSection(sectionId);
+            });
+        });
+
+        // Mobile menu toggle
+        function toggleMobileMenu() {
+            const mobileMenu = document.getElementById('mobile-menu');
+            mobileMenu.classList.toggle('hidden');
+        }
+
+        // Smooth scrolling for footer links
+        document.querySelectorAll('footer a[href^="#"]').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const sectionId = link.getAttribute('href').substring(1);
+                scrollToSection(sectionId);
+            });
+        });
+
+        // Add scroll effect to navigation
+        window.addEventListener('scroll', () => {
+            const nav = document.querySelector('nav');
+            if (window.scrollY > 100) {
+                nav.classList.add('bg-white/95');
+                nav.classList.remove('bg-white/90');
+            } else {
+                nav.classList.add('bg-white/90');
+                nav.classList.remove('bg-white/95');
+            }
+        });
+
+        // Initialize animations on scroll
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('animate-fade-in');
+                }
+            });
+        }, observerOptions);
+
+        // Observe all sections for animations
+        document.querySelectorAll('.section').forEach(section => {
+            observer.observe(section);
+        });
+
+        // Newsletter subscription
+        document.querySelector('footer button').addEventListener('click', (e) => {
+            e.preventDefault();
+            const email = document.querySelector('footer input[type="email"]').value;
+            if (email) {
+                alert('Thank you for subscribing to our newsletter!');
+                document.querySelector('footer input[type="email"]').value = '';
+            } else {
+                alert('Please enter a valid email address.');
+            }
+        });
+    </script>
+</body>
+</html>

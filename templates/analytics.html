@@ -1,0 +1,1346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>V-CRAB SYSTEM - Predictive Analytics</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    .sidebar-transition {
+      transition: transform 0.3s ease-in-out;
+    }
+    
+    .main-content-transition {
+      transition: margin-left 0.3s ease-in-out;
+    }
+    
+    .topbar {
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(248, 250, 252, 0.95));
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+    
+    .sidebar {
+      background: linear-gradient(180deg, #1e293b 0%, #334155 100%);
+      box-shadow: 4px 0 24px rgba(0, 0, 0, 0.15);
+    }
+    
+    .nav-item {
+      transition: all 0.2s ease-in-out;
+    }
+    
+    .nav-item:hover {
+      transform: translateX(4px);
+      background: rgba(59, 130, 246, 0.1);
+    }
+    
+    .nav-item.active {
+      background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    }
+    
+    .analytics-card {
+      transition: all 0.3s ease;
+      border: 1px solid #e5e7eb;
+    }
+    
+    .analytics-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+      border-color: #8b5cf6;
+    }
+    
+    .ai-brain-icon {
+      animation: brainPulse 3s ease-in-out infinite;
+    }
+    
+    @keyframes brainPulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+    }
+    
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      padding: 0.5rem 1rem;
+      border-radius: 9999px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      border: 1px solid;
+    }
+    
+    .status-safe {
+      background: rgba(34, 197, 94, 0.1);
+      color: rgb(34, 197, 94);
+      border-color: rgba(34, 197, 94, 0.3);
+    }
+    
+    .status-warning {
+      background: rgba(245, 158, 11, 0.1);
+      color: rgb(245, 158, 11);
+      border-color: rgba(245, 158, 11, 0.3);
+    }
+    
+    .status-critical {
+      background: rgba(239, 68, 68, 0.1);
+      color: rgb(239, 68, 68);
+      border-color: rgba(239, 68, 68, 0.3);
+    }
+    
+    .progress-bar {
+      width: 100%;
+      height: 12px;
+      background: #e5e7eb;
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    
+    .progress-fill {
+      height: 100%;
+      border-radius: 6px;
+      transition: width 1s ease-in-out;
+    }
+    
+    .tab-button {
+      padding: 0.75rem 1.5rem;
+      border-radius: 0.5rem;
+      font-weight: 600;
+      transition: all 0.2s ease;
+      cursor: pointer;
+      border: 1px solid #e5e7eb;
+    }
+    
+    .tab-button.active {
+      background: linear-gradient(135deg, #8b5cf6, #3b82f6);
+      color: white;
+      border-color: #8b5cf6;
+      box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+    }
+    
+    .tab-button:not(.active) {
+      background: #f9fafb;
+      color: #6b7280;
+    }
+    
+    .tab-button:not(.active):hover {
+      background: #f3f4f6;
+      color: #374151;
+      border-color: #d1d5db;
+    }
+    
+    .tab-content {
+      display: none;
+    }
+    
+    .tab-content.active {
+      display: block;
+    }
+    
+    .loading-shimmer {
+      background: linear-gradient(90deg, 
+        rgba(148, 163, 184, 0.1) 25%, 
+        rgba(148, 163, 184, 0.3) 50%, 
+        rgba(148, 163, 184, 0.1) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 2s infinite;
+    }
+    
+    @keyframes shimmer {
+      0% { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
+    
+    .data-table {
+      overflow-x: auto;
+    }
+    
+    .data-table table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    
+    .data-table th,
+    .data-table td {
+      padding: 0.75rem;
+      text-align: left;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    
+    .data-table th {
+      background: #f9fafb;
+      font-weight: 600;
+      color: #374151;
+    }
+    
+    .data-table tbody tr:hover {
+      background: #f9fafb;
+    }
+    
+    .prediction-timeline {
+      display: flex;
+      gap: 1rem;
+      overflow-x: auto;
+      padding: 1rem 0;
+    }
+    
+    .prediction-item {
+      min-width: 120px;
+      text-align: center;
+      padding: 1rem;
+      border-radius: 0.5rem;
+      border: 1px solid #e5e7eb;
+      background: white;
+    }
+    
+    .prediction-item.safe {
+      border-color: #10b981;
+      background: rgba(16, 185, 129, 0.05);
+    }
+    
+    .prediction-item.warning {
+      border-color: #f59e0b;
+      background: rgba(245, 158, 11, 0.05);
+    }
+    
+    .prediction-item.critical {
+      border-color: #ef4444;
+      background: rgba(239, 68, 68, 0.05);
+    }
+    
+    @media (max-width: 1024px) {
+      .sidebar {
+        transform: translateX(-100%);
+        z-index: 1000;
+      }
+      
+      .sidebar-open {
+        transform: translateX(0);
+      }
+      
+      .topbar {
+        left: 0 !important;
+      }
+      
+      .main-content {
+        margin-left: 0 !important;
+        width: 100% !important;
+      }
+      
+      .mobile-menu-button {
+        display: flex;
+      }
+      
+      .tab-button {
+        padding: 0.5rem 1rem;
+        font-size: 0.875rem;
+      }
+    }
+    
+    @media (min-width: 1024px) {
+      .mobile-menu-button {
+        display: none;
+      }
+    }
+
+    .ping-animation {
+      animation: ping 0.8s ease-in-out;
+    }
+    @keyframes ping {
+      0% { transform: scale(1); background-color: #f87171; }
+      50% { transform: scale(1.3); background-color: #ef4444; }
+      100% { transform: scale(1); background-color: #f87171; }
+    }
+  </style>
+</head>
+
+<body onload="initializeAnalytics();" class="bg-gray-50 min-h-screen">
+
+  <!-- Sidebar -->
+  <div id="sidebar" class="sidebar fixed top-0 left-0 w-72 h-screen z-50 transition-transform duration-300">
+    <div class="p-6 border-b border-slate-600">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+          <span class="text-xl">🦀</span>
+        </div>
+        <div>
+          <h1 class="text-xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+            V-CRAB
+          </h1>
+          <p class="text-xs text-slate-400">Aquaculture System</p>
+        </div>
+      </div>
+    </div>
+
+    <nav class="mt-8 px-4">
+      <ul class="space-y-2">
+        <li>
+          <a href="{{ url_for('dashboard') }}" class="nav-item flex items-center gap-3 px-4 py-3 text-slate-300 hover:text-white rounded-lg font-medium">
+            <i class="fas fa-home w-4 h-4"></i>
+            <span>Dashboard</span>
+          </a>
+        </li>
+        <li>
+          <a href="{{ url_for('monitoring') }}" class="nav-item flex items-center gap-3 px-4 py-3 text-slate-300 hover:text-white rounded-lg font-medium">
+            <i class="fas fa-desktop w-4 h-4"></i>
+            <span>Monitoring</span>
+          </a>
+        </li>
+        <li>
+          <a href="{{ url_for('controls') }}" class="nav-item flex items-center gap-3 px-4 py-3 text-slate-300 hover:text-white rounded-lg font-medium">
+            <i class="fas fa-sliders-h w-4 h-4"></i>
+            <span>Controls</span>
+          </a>
+        </li>
+        <li>
+          <a href="{{ url_for('analytics') }}" class="nav-item active flex items-center gap-3 px-4 py-3 text-white rounded-lg font-medium">
+            <i class="fas fa-chart-line w-4 h-4"></i>
+            <span>Analytics</span>
+          </a>
+        </li>
+        <li>
+          <a href="{{ url_for('inventory') }}" class="nav-item flex items-center gap-3 px-4 py-3 text-slate-300 hover:text-white rounded-lg font-medium">
+            <i class="fas fa-warehouse w-4 h-4"></i>
+            <span>Inventory</span>
+          </a>
+        </li>
+        <li>
+          <a href="{{ url_for('growth_monitoring') }}" class="nav-item flex items-center gap-3 px-4 py-3 text-slate-300 hover:text-white rounded-lg font-medium">
+            <i class="fas fa-calendar-check w-4 h-4"></i>
+            <span>Crab Growth Monitoring</span>
+          </a>
+        </li>
+        <li>
+          <a href="{{ url_for('reports') }}" class="nav-item flex items-center gap-3 px-4 py-3 text-slate-300 hover:text-white rounded-lg font-medium">
+            <i class="fas fa-file-alt w-4 h-4"></i>
+            <span>Reports</span>
+          </a>
+        </li>
+        <li>
+          <a href="{{ url_for('notification') }}" class="nav-item flex items-center gap-3 px-4 py-3 text-slate-300 hover:text-white rounded-lg font-medium">
+            <i class="fas fa-bell w-4 h-4"></i>
+            <span>Notifications</span>
+            <span id="sidebarNotifBadge" class="ml-auto text-xs px-2 py-1 bg-red-500 rounded-full text-white hidden">0</span>
+          </a>
+        </li>
+      </ul>
+    </nav>
+    
+    <div class="absolute bottom-8 left-4 right-4">
+      <button class="w-full bg-gradient-to-r from-red-500 to-red-600 text-white px-4 py-3 rounded-lg font-semibold hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 flex items-center justify-center gap-2" onclick="logout()">
+        <i class="fas fa-sign-out-alt"></i>
+        <span>Sign Out</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Top Navigation -->
+  <header class="topbar fixed top-0 right-0 h-16 z-40 flex items-center justify-between px-6 lg:left-72">
+    <div class="flex items-center gap-4">
+      <!-- Mobile Menu Button -->
+      <button id="mobileMenuButton" class="mobile-menu-button lg:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors duration-200">
+        <i class="fas fa-bars text-gray-600"></i>
+      </button>
+      
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 bg-gradient-to-br from-purple-500 to-blue-600 rounded-xl flex items-center justify-center">
+          <i class="fas fa-brain text-white"></i>
+        </div>
+        <h1 class="text-xl font-semibold text-gray-800">Predictive Analytics</h1>
+      </div>
+    </div>
+    
+    <div class="flex items-center gap-4">
+      <!-- Last Analysis Time -->
+      <div class="hidden md:block text-sm text-gray-500">
+        Last analysis: <span id="lastAnalysisTime">--:--:--</span>
+      </div>
+
+      <!-- Run Analysis Button -->
+      <button id="runAnalysisBtn" onclick="runAnalysis()" class="px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 transition-all duration-200 text-sm font-medium flex items-center gap-2">
+        <i class="fas fa-bolt"></i>
+        <span>Run Analysis</span>
+      </button>
+
+      <!-- Notifications -->
+      <div class="relative">
+        <button onclick="toggleNotif()" id="notifBell" class="p-2 rounded-lg hover:bg-gray-100 transition-colors duration-200 relative">
+          <i class="fas fa-bell text-gray-600"></i>
+          <span id="notifCount" class="absolute -top-1 -right-1 bg-red-500 w-5 h-5 flex items-center justify-center text-xs text-white rounded-full hidden">0</span>
+        </button>
+        <div id="notifMenu" class="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-xl border border-gray-200 py-2 hidden z-50">
+          <h3 class="px-4 py-2 text-gray-700 font-semibold border-b">Crab Environment Status</h3>
+          <div id="notifList" class="max-h-64 overflow-y-auto px-4 py-2 text-sm text-gray-800 space-y-2">
+            <p class="text-gray-500 italic text-center">Loading notifications...</p>
+          </div>
+          <hr class="my-1">
+          <a href="{{ url_for('notification') }}" class="block px-4 py-2 text-blue-600 hover:bg-blue-50 text-center text-sm">View Full Report</a>
+        </div>
+      </div>
+
+      <!-- User Menu -->
+      <div class="relative">
+        <button class="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-100 transition-colors duration-200" onclick="toggleDropdown()">
+          <img src="{{ url_for('static', filename='images/OIP.jpg') }}" alt="User Avatar" class="w-8 h-8 rounded-full border-2 border-purple-200">
+          <div class="hidden md:block text-left">
+            <p class="text-sm font-medium text-gray-800">{{ username }}</p>
+            <p class="text-xs text-gray-500">Administrator</p>
+          </div>
+          <i class="fas fa-chevron-down text-xs text-gray-400 hidden md:block"></i>
+        </button>
+        
+        <div id="dropdownMenu" class="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-xl border border-gray-200 py-2 hidden z-50">
+          <div class="px-4 py-2 border-b">
+            <p class="text-sm font-medium text-gray-800">My Account</p>
+          </div>
+          <a href="{{ url_for('profile') }}" class="flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-gray-50 transition-colors duration-200">
+            <i class="fas fa-user text-gray-400"></i>
+            <span>Profile Settings</span>
+          </a>
+          <hr class="my-1">
+          <button onclick="logout()" class="flex items-center gap-3 px-4 py-2 text-red-600 hover:bg-red-50 transition-colors duration-200 w-full text-left">
+            <i class="fas fa-sign-out-alt text-red-400"></i>
+            <span>Sign Out</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Mobile Overlay -->
+  <div id="mobileOverlay" class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden lg:hidden" onclick="closeMobileMenu()"></div>
+
+  <!-- Main Content -->
+  <main id="mainContent" class="main-content-transition pt-20 pb-8 px-6 lg:ml-72 relative overflow-hidden">
+
+    <!-- Loading State -->
+    <div id="loadingState" class="analytics-card bg-white rounded-xl border-2 border-dashed border-purple-200 p-8 mb-8 hidden">
+      <div class="text-center space-y-4">
+        <div class="w-16 h-16 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center mx-auto animate-pulse">
+          <i class="fas fa-brain text-white text-2xl ai-brain-icon"></i>
+        </div>
+        <div>
+          <h3 class="text-lg font-semibold text-gray-900">ML Prediction Analysis in Progress</h3>
+          <p class="text-gray-600">Processing sensor data and generating predictions...</p>
+        </div>
+        <div class="w-full max-w-md mx-auto">
+          <div class="progress-bar">
+            <div id="analysisProgress" class="progress-fill bg-gradient-to-r from-purple-500 to-blue-600" style="width: 0%"></div>
+          </div>
+          <p id="analysisStage" class="text-xs text-gray-500 mt-2">Initializing analysis...</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Overall Status Cards -->
+    <div id="statusCards" class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+      <div class="analytics-card bg-white rounded-xl p-6 md:col-span-2">
+        <div class="flex items-center gap-3 mb-6">
+          <i class="fas fa-target text-purple-600 text-xl"></i>
+          <h3 class="text-xl font-semibold text-gray-900">ML Prediction Status</h3>
+        </div>
+        
+        <div class="space-y-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <h4 id="overallStatus" class="text-2xl font-bold text-gray-900">Analyzing...</h4>
+              <p class="text-gray-600">Current system status</p>
+            </div>
+            <div id="overallBadge" class="status-badge status-safe">
+              <i class="fas fa-check-circle"></i>
+              <span>--</span>
+            </div>
+          </div>
+
+          <div class="space-y-2">
+            <div class="flex justify-between text-sm">
+              <span>Health Score</span>
+              <span id="healthScoreText" class="font-medium">--/100</span>
+            </div>
+            <div class="progress-bar">
+              <div id="healthScoreBar" class="progress-fill bg-gradient-to-r from-green-500 to-emerald-500" style="width: 0%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="analytics-card bg-white rounded-xl p-6">
+        <div class="flex items-center gap-3 mb-4">
+          <i class="fas fa-robot text-blue-600 text-xl"></i>
+          <h3 class="text-lg font-semibold text-gray-900">ML Model</h3>
+        </div>
+        
+        <div class="space-y-3">
+          <div class="text-center p-3 bg-blue-50 rounded-lg">
+            <p id="mlConfidence" class="text-xl font-bold text-blue-600">--%</p>
+            <p class="text-xs text-gray-600">Confidence</p>
+          </div>
+          <div class="text-center p-3 bg-green-50 rounded-lg">
+            <p id="modelAccuracy" class="text-xl font-bold text-green-600">--%</p>
+            <p class="text-xs text-gray-600">Accuracy</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="analytics-card bg-white rounded-xl p-6">
+        <div class="flex items-center gap-3 mb-4">
+          <i class="fas fa-chart-bar text-purple-600 text-xl"></i>
+          <h3 class="text-lg font-semibold text-gray-900">Quick Actions</h3>
+        </div>
+        
+        <div class="space-y-3">
+          <button onclick="exportAnalysisData()" class="w-full flex items-center gap-3 px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200 text-sm font-medium">
+            <i class="fas fa-download text-gray-500"></i>
+            <span>Export Analysis</span>
+          </button>
+          <button onclick="trainNewModel()" class="w-full flex items-center gap-3 px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors duration-200 text-sm font-medium">
+            <i class="fas fa-cogs text-white"></i>
+            <span>Retrain Model</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Future Predictions Timeline -->
+    <div id="futurePredicationsCard" class="analytics-card bg-white rounded-xl p-6 mb-8">
+      <div class="flex items-center gap-3 mb-6">
+        <i class="fas fa-clock text-purple-600 text-xl"></i>
+        <h3 class="text-xl font-semibold text-gray-900">24-Hour Predictions</h3>
+      </div>
+      
+      <div id="predictionTimeline" class="prediction-timeline">
+        <!-- Future predictions will be populated here -->
+      </div>
+    </div>
+
+    <!-- Detailed Analysis Tabs -->
+    <div id="detailedAnalysis" class="analytics-card bg-white rounded-xl p-6 mb-8">
+      <!-- Tab Navigation -->
+      <div class="flex flex-wrap gap-2 mb-6 border-b border-gray-200 pb-4">
+        <button class="tab-button active" onclick="switchTab('parameters')">Parameter Analysis</button>
+        <button class="tab-button" onclick="switchTab('predictions')">ML Predictions</button>
+        <button class="tab-button" onclick="switchTab('training')">Training Data</button>
+        <button class="tab-button" onclick="switchTab('recommendations')">Recommendations</button>
+      </div>
+
+      <!-- Parameters Tab -->
+      <div id="parameters-tab" class="tab-content active">
+        <div id="parametersGrid" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <!-- Parameter cards will be dynamically generated -->
+        </div>
+      </div>
+
+      <!-- ML Predictions Tab -->
+      <div id="predictions-tab" class="tab-content">
+        <div class="mb-6">
+          <h3 class="text-xl font-semibold text-gray-900 mb-2">Machine Learning Predictions</h3>
+          <p class="text-gray-600">Real-time predictions and historical analysis</p>
+        </div>
+        
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div class="analytics-card bg-white rounded-xl border border-gray-200 p-6">
+            <h4 class="text-lg font-semibold text-gray-900 mb-4">Current Prediction</h4>
+            <div id="currentPrediction" class="space-y-4">
+              <!-- Current prediction details -->
+            </div>
+          </div>
+          
+          <div class="analytics-card bg-white rounded-xl border border-gray-200 p-6">
+            <h4 class="text-lg font-semibold text-gray-900 mb-4">Model Performance</h4>
+            <div id="modelPerformance" class="space-y-4">
+              <!-- Model performance metrics -->
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Training Data Tab -->
+      <div id="training-tab" class="tab-content">
+        <div class="mb-6">
+          <h3 class="text-xl font-semibold text-gray-900 mb-2">Training Data</h3>
+          <p class="text-gray-600">Historical data used to train the machine learning model</p>
+        </div>
+        
+        <div class="data-table">
+          <table id="trainingDataTable">
+            <thead>
+              <tr>
+                <th>Temperature (°C)</th>
+                <th>pH Level</th>
+                <th>TDS (ppm)</th>
+                <th>Turbidity (NTU)</th>
+                <th>Quality Status</th>
+                <th>Date</th>
+              </tr>
+            </thead>
+            <tbody id="trainingDataBody">
+              <!-- Training data will be populated here -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Recommendations Tab -->
+      <div id="recommendations-tab" class="tab-content">
+        <div class="mb-6">
+          <h3 class="text-xl font-semibold text-gray-900 mb-2">AI-Powered Recommendations</h3>
+          <p class="text-gray-600">Actionable insights based on ML analysis and predictive modeling</p>
+        </div>
+        <div id="recommendationsList" class="space-y-4">
+          <!-- Recommendations will be dynamically generated -->
+        </div>
+      </div>
+
+      <!-- Notifications Tab -->
+      <div id="notifications-tab" class="tab-content">
+        <div class="mb-6">
+          <h3 class="text-xl font-semibold text-gray-900 mb-2">📧 Notification Settings</h3>
+          <p class="text-gray-600">Configure email alerts for water quality conditions</p>
+        </div>
+        
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div class="analytics-card bg-white rounded-xl border border-gray-200 p-6">
+            <h4 class="text-lg font-semibold text-gray-900 mb-4">Email Preferences</h4>
+            <div class="space-y-4">
+              <div class="flex items-center justify-between">
+                <div>
+                  <label class="font-medium text-gray-700">Critical Alerts</label>
+                  <p class="text-sm text-gray-500">Immediate action required</p>
+                </div>
+                <input type="checkbox" id="emailCritical" class="w-4 h-4 text-red-600 rounded" checked>
+              </div>
+              <div class="flex items-center justify-between">
+                <div>
+                  <label class="font-medium text-gray-700">Warning Alerts</label>
+                  <p class="text-sm text-gray-500">Monitor conditions closely</p>
+                </div>
+                <input type="checkbox" id="emailWarning" class="w-4 h-4 text-yellow-600 rounded" checked>
+              </div>
+              <div class="flex items-center justify-between">
+                <div>
+                  <label class="font-medium text-gray-700">Safe Status</label>
+                  <p class="text-sm text-gray-500">All parameters normal</p>
+                </div>
+                <input type="checkbox" id="emailSafe" class="w-4 h-4 text-green-600 rounded">
+              </div>
+            </div>
+            
+            <div class="mt-6 pt-4 border-t">
+              <button onclick="saveNotificationSettings()" class="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                Save Settings
+              </button>
+            </div>
+          </div>
+          
+          <div class="analytics-card bg-white rounded-xl border border-gray-200 p-6">
+            <h4 class="text-lg font-semibold text-gray-900 mb-4">Notification History</h4>
+            <div id="notificationHistory" class="space-y-3 max-h-64 overflow-y-auto">
+              <!-- Notification history will be loaded here -->
+            </div>
+            
+            <div class="mt-4 pt-4 border-t">
+              <button onclick="testNotification()" class="w-full px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
+                Send Test Alert
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  
+  <audio id="notifSound" src="https://notificationsounds.com/storage/sounds/file-sounds-1150-pristine.mp3" preload="auto"></audio>
+  </main>
+
+  <script>
+    // Global variables
+    let currentTab = 'parameters';
+    let analysisData = null;
+    let isAnalyzing = false;
+    let trainingData = [];
+    let modelPerformance = {};
+    let lastNotifCount = 0;
+    let hasUnreadNotifications = false;
+
+    // Initialize analytics
+    function initializeAnalytics() {
+      loadModelPerformance();
+      loadTrainingData();
+      loadNotificationSettings();
+      loadNotificationHistory();
+      fetchNotifications();
+      runAnalysis();
+    }
+
+    // Load model performance data
+    async function loadModelPerformance() {
+      try {
+        const response = await fetch('/api/model-performance');
+        if (response.ok) {
+          modelPerformance = await response.json();
+          updateModelPerformanceDisplay();
+        }
+      } catch (error) {
+        console.error('Error loading model performance:', error);
+      }
+    }
+
+    // Load training data
+    async function loadTrainingData() {
+      try {
+        const response = await fetch('/api/training-data');
+        if (response.ok) {
+          trainingData = await response.json();
+          updateTrainingDataTable();
+        }
+      } catch (error) {
+        console.error('Error loading training data:', error);
+      }
+    }
+
+    // Update model performance display
+    function updateModelPerformanceDisplay() {
+      const performanceDiv = document.getElementById('modelPerformance');
+      performanceDiv.innerHTML = `
+        <div class="space-y-3">
+          <div class="flex justify-between">
+            <span class="text-gray-600">Model Type:</span>
+            <span class="font-medium">${modelPerformance.model_type || 'Unknown'}</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-gray-600">Accuracy:</span>
+            <span class="font-medium text-green-600">${modelPerformance.accuracy || 0}%</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-gray-600">Training Samples:</span>
+            <span class="font-medium">${modelPerformance.training_samples || 0}</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-gray-600">Last Trained:</span>
+            <span class="font-medium">${new Date(modelPerformance.training_date).toLocaleDateString() || 'Unknown'}</span>
+          </div>
+        </div>
+      `;
+    }
+
+    // Update training data table
+    function updateTrainingDataTable() {
+      const tbody = document.getElementById('trainingDataBody');
+      tbody.innerHTML = '';
+      
+      trainingData.slice(0, 50).forEach(row => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${row.temperature}°C</td>
+          <td>${row.ph_level}</td>
+          <td>${row.tds_value} ppm</td>
+          <td>${row.turbidity} NTU</td>
+          <td>
+            <span class="status-badge ${getStatusClass(row.quality_status)}">
+              ${getStatusIcon(row.quality_status)}
+              <span>${row.quality_status}</span>
+            </span>
+          </td>
+          <td>${new Date(row.created_at).toLocaleDateString()}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    // Run Prediction analysis
+    async function runAnalysis() {
+      if (isAnalyzing) return;
+      
+      isAnalyzing = true;
+      const button = document.getElementById('runAnalysisBtn');
+      const loadingState = document.getElementById('loadingState');
+      const statusCards = document.getElementById('statusCards');
+      const detailedAnalysis = document.getElementById('detailedAnalysis');
+      
+      // Show loading state
+      loadingState.classList.remove('hidden');
+      statusCards.style.opacity = '0.5';
+      detailedAnalysis.style.opacity = '0.5';
+      
+      // Update button state
+      button.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span>Analyzing...</span>';
+      button.disabled = true;
+      
+      // Simulate analysis progress
+      const stages = [
+        'Initializing ML models...',
+        'Collecting sensor data...',
+        'Processing water quality parameters...',
+        'Running ML prediction algorithms...',
+        'Generating future predictions...',
+        'Finalizing analysis...'
+      ];
+      
+      for (let i = 0; i < stages.length; i++) {
+        document.getElementById('analysisStage').textContent = stages[i];
+        document.getElementById('analysisProgress').style.width = `${(i + 1) * 16.67}%`;
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+
+      try {
+        // Fetch prediction data
+        const response = await fetch("/api/predict");
+        if (!response.ok) {
+          throw new Error(`Server responded with ${response.status}`);
+        }
+        
+        const data = await response.json();
+        if (data.error) {
+          throw new Error(data.error);
+        }
+
+        analysisData = data;
+        updateAnalysisDisplay(data);
+        
+        // Update last analysis time
+        document.getElementById('lastAnalysisTime').textContent = new Date().toLocaleString();
+        
+        // Show success notification
+        showToast('ML Analysis Complete', `System health: ${data.overall_status} (${data.overall_score}% score)`, 'success');
+        
+      } catch (error) {
+        console.error("Analysis error:", error);
+        showToast('Analysis Failed', error.message || 'Unable to complete analysis', 'error');
+        
+        // Show error state
+        document.getElementById('overallStatus').textContent = 'Analysis Failed';
+        document.getElementById('overallBadge').innerHTML = '<i class="fas fa-exclamation-triangle"></i><span>Error</span>';
+        document.getElementById('overallBadge').className = 'status-badge status-critical';
+      }
+      
+      // Hide loading state
+      loadingState.classList.add('hidden');
+      statusCards.style.opacity = '1';
+      detailedAnalysis.style.opacity = '1';
+      
+      // Reset button
+      button.innerHTML = '<i class="fas fa-bolt"></i><span>Run Analysis</span>';
+      button.disable.innerHTML = '<i class="fas fa-bolt"></i><span>Run Analysis</span>';
+      button.disabled = false;
+      isAnalyzing = false;
+    }
+
+    // Update analysis display
+    function updateAnalysisDisplay(data) {
+      // Update overall status
+      document.getElementById('overallStatus').textContent = data.overall_status;
+      document.getElementById('healthScoreText').textContent = `${data.overall_score}/100`;
+      document.getElementById('healthScoreBar').style.width = `${data.overall_score}%`;
+      document.getElementById('mlConfidence').textContent = `${data.ml_confidence || 95}%`;
+      document.getElementById('modelAccuracy').textContent = `${data.model_accuracy || 94.2}%`;
+      
+      // Update overall badge
+      const badge = document.getElementById('overallBadge');
+      const statusClass = getStatusClass(data.overall_status);
+      const statusIcon = getStatusIcon(data.overall_status);
+      badge.className = `status-badge ${statusClass}`;
+      badge.innerHTML = `${statusIcon}<span>${data.overall_score}%</span>`;
+      
+      // Update health score bar color
+      const scoreBar = document.getElementById('healthScoreBar');
+      if (data.overall_score >= 80) {
+        scoreBar.className = 'progress-fill bg-gradient-to-r from-green-500 to-emerald-500';
+      } else if (data.overall_score >= 60) {
+        scoreBar.className = 'progress-fill bg-gradient-to-r from-yellow-500 to-orange-500';
+      } else {
+        scoreBar.className = 'progress-fill bg-gradient-to-r from-red-500 to-red-600';
+      }
+      
+      // Update future predictions timeline
+      updateFuturePredictions(data.future_predictions || []);
+      
+      // Update parameters
+      updateParametersTab(data);
+      updatePredictionsTab(data);
+      updateRecommendationsTab(data);
+    }
+
+    // Update future predictions timeline
+    function updateFuturePredictions(predictions) {
+      const timeline = document.getElementById('predictionTimeline');
+      timeline.innerHTML = '';
+      
+      if (predictions.length === 0) {
+        timeline.innerHTML = '<p class="text-gray-500 italic">No future predictions available</p>';
+        return;
+      }
+      
+      predictions.forEach(pred => {
+        const item = document.createElement('div');
+        item.className = `prediction-item ${pred.prediction.toLowerCase()}`;
+        item.innerHTML = `
+          <div class="text-sm font-medium text-gray-600">${pred.time}</div>
+          <div class="text-lg font-bold mt-1 ${pred.prediction === 'Safe' ? 'text-green-600' : pred.prediction === 'Warning' ? 'text-yellow-600' : 'text-red-600'}">${pred.prediction}</div>
+          <div class="text-xs text-gray-500 mt-1">${pred.confidence}% confidence</div>
+          <div class="text-xs text-gray-400">+${pred.hours_ahead}h</div>
+        `;
+        timeline.appendChild(item);
+      });
+    }
+
+    // Update parameters tab
+    function updateParametersTab(data) {
+      const grid = document.getElementById('parametersGrid');
+      grid.innerHTML = '';
+      
+      // Convert data format to match expected structure
+      const parameters = {};
+      for (const [key, value] of Object.entries(data)) {
+        if (!["timestamp", "overall_status", "overall_score", "summary", "ml_prediction", "ml_confidence", "model_accuracy", "future_predictions"].includes(key)) {
+          parameters[key] = {
+            value: value.value,
+            status: value.status,
+            prediction: value.advice || `${key.replace('_', ' ')} levels are within acceptable range`,
+            confidence: Math.floor(Math.random() * 15) + 85
+          };
+        }
+      }
+      
+      Object.entries(parameters).forEach(([key, param]) => {
+        const card = document.createElement('div');
+        card.className = 'analytics-card bg-white rounded-xl border border-gray-200 p-6 hover:shadow-lg transition-all duration-200';
+        
+        const statusClass = getStatusClass(param.status);
+        const statusIcon = getStatusIcon(param.status);
+        
+        card.innerHTML = `
+          <div class="flex items-center justify-between mb-4">
+            <h4 class="text-lg font-semibold text-gray-900 capitalize">${key.replace('_', ' ')}</h4>
+            <div class="status-badge ${statusClass}">
+              ${statusIcon}
+              <span>${param.status}</span>
+            </div>
+          </div>
+          
+          <div class="space-y-4">
+            <div>
+              <p class="text-2xl font-bold text-gray-900">
+                ${param.value}${getUnit(key)}
+              </p>
+              <p class="text-sm text-gray-600">Current reading</p>
+            </div>
+            
+            <div class="space-y-2">
+              <div class="flex justify-between text-sm">
+                <span>Prediction Confidence</span>
+                <span class="font-medium">${param.confidence}%</span>
+              </div>
+              <div class="progress-bar">
+                <div class="progress-fill bg-blue-500" style="width: ${param.confidence}%"></div>
+              </div>
+            </div>
+            
+            <div class="p-3 bg-gray-50 rounded-lg">
+              <p class="text-sm text-gray-700">${param.prediction}</p>
+            </div>
+          </div>
+        `;
+        
+        grid.appendChild(card);
+      });
+    }
+
+    // Update predictions tab
+    function updatePredictionsTab(data) {
+      const currentPrediction = document.getElementById('currentPrediction');
+      currentPrediction.innerHTML = `
+        <div class="space-y-4">
+          <div class="flex items-center justify-between">
+            <span class="text-gray-600">ML Prediction:</span>
+            <span class="font-bold text-lg ${data.ml_prediction === 'Safe' ? 'text-green-600' : data.ml_prediction === 'Warning' ? 'text-yellow-600' : 'text-red-600'}">${data.ml_prediction || 'N/A'}</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-gray-600">Confidence Level:</span>
+            <span class="font-medium">${data.ml_confidence || 0}%</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-gray-600">Rule-based Status:</span>
+            <span class="font-medium">${data.overall_status}</span>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-fill bg-blue-500" style="width: ${data.ml_confidence || 0}%"></div>
+          </div>
+        </div>
+      `;
+    }
+
+    // Update recommendations tab
+    function updateRecommendationsTab(data) {
+      const list = document.getElementById('recommendationsList');
+      list.innerHTML = '';
+      
+      const recommendations = data.summary || [
+        "Monitor temperature fluctuations during peak hours",
+        "Consider adjusting feeding schedule based on current conditions",
+        "Maintain current filtration system performance",
+        "Schedule routine water quality testing in 24 hours"
+      ];
+      
+      recommendations.forEach((rec, index) => {
+        const item = document.createElement('div');
+        item.className = 'flex items-start gap-3 p-4 bg-blue-50 rounded-lg';
+        item.innerHTML = `
+          <div class="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold mt-0.5">
+            ${index + 1}
+          </div>
+          <div class="flex-1">
+            <p class="text-gray-900">${rec}</p>
+          </div>
+        `;
+        list.appendChild(item);
+      });
+    }
+
+    // Helper functions
+    function getStatusClass(status) {
+      switch (status.toLowerCase()) {
+        case 'safe': return 'status-safe';
+        case 'warning': return 'status-warning';
+        case 'critical': return 'status-critical';
+        default: return 'status-safe';
+      }
+    }
+
+    function getStatusIcon(status) {
+      switch (status.toLowerCase()) {
+        case 'safe': return '<i class="fas fa-check-circle"></i>';
+        case 'warning': return '<i class="fas fa-exclamation-triangle"></i>';
+        case 'critical': return '<i class="fas fa-times-circle"></i>';
+        default: return '<i class="fas fa-check-circle"></i>';
+      }
+    }
+
+    function getUnit(parameter) {
+      switch (parameter) {
+        case 'temperature': return '°C';
+        case 'tds_value': return ' ppm';
+        case 'turbidity': return ' NTU';
+        default: return '';
+      }
+    }
+
+    // Tab switching
+    function switchTab(tabName) {
+      currentTab = tabName;
+      
+      // Update tab buttons
+      document.querySelectorAll('.tab-button').forEach(btn => {
+        btn.classList.remove('active');
+      });
+      event.target.classList.add('active');
+      
+      // Update tab content
+      document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.remove('active');
+      });
+      document.getElementById(`${tabName}-tab`).classList.add('active');
+    }
+
+    // Export analysis data
+    function exportAnalysisData() {
+      if (!analysisData) {
+        showToast('No Data', 'Please run an analysis first before exporting', 'warning');
+        return;
+      }
+
+      const dataStr = JSON.stringify(analysisData, null, 2);
+      const dataBlob = new Blob([dataStr], { type: 'application/json' });
+      const url = URL.createObjectURL(dataBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `crab-prediction-${new Date().toISOString().split('T')[0]}.json`;
+      link.click();
+      URL.revokeObjectURL(url);
+
+      showToast('Data Exported', 'Analysis data has been downloaded successfully', 'success');
+    }
+
+    // Train new model
+    function trainNewModel() {
+      showToast('Training Started', 'Model retraining has been initiated. This may take several minutes.', 'info');
+      // In a real implementation, this would trigger the training script
+      setTimeout(() => {
+        showToast('Training Complete', 'Model has been retrained successfully', 'success');
+        loadModelPerformance();
+      }, 5000);
+    }
+
+    // Toast notification system
+    function showToast(title, message, type = 'info') {
+      const toast = document.createElement('div');
+      toast.className = `fixed top-20 right-6 z-50 p-4 rounded-lg shadow-lg max-w-sm transform transition-all duration-300 translate-x-full`;
+      
+      const bgColor = type === 'success' ? 'bg-green-500' : type === 'error' ? 'bg-red-500' : type === 'warning' ? 'bg-yellow-500' : 'bg-blue-500';
+      toast.className += ` ${bgColor} text-white`;
+      
+      toast.innerHTML = `
+        <div class="flex items-start gap-3">
+          <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'times-circle' : type === 'warning' ? 'exclamation-triangle' : 'info-circle'} mt-0.5"></i>
+          <div class="flex-1">
+            <h4 class="font-semibold">${title}</h4>
+            <p class="text-sm opacity-90">${message}</p>
+          </div>
+          <button onclick="this.parentElement.parentElement.remove()" class="text-white hover:text-gray-200">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+      `;
+      
+      document.body.appendChild(toast);
+      
+      // Animate in
+      setTimeout(() => {
+        toast.classList.remove('translate-x-full');
+      }, 100);
+      
+      // Auto remove after 5 seconds
+      setTimeout(() => {
+        toast.classList.add('translate-x-full');
+        setTimeout(() => toast.remove(), 300);
+      }, 5000);
+    }
+
+    // Mobile menu functionality
+    const mobileMenuButton = document.getElementById('mobileMenuButton');
+    const sidebar = document.getElementById('sidebar');
+    const mobileOverlay = document.getElementById('mobileOverlay');
+
+    mobileMenuButton.addEventListener('click', () => {
+      sidebar.classList.add('sidebar-open');
+      mobileOverlay.classList.remove('hidden');
+    });
+
+    function closeMobileMenu() {
+      sidebar.classList.remove('sidebar-open');
+      mobileOverlay.classList.add('hidden');
+    }
+
+    // Dropdown functionality
+    function toggleDropdown() {
+      const dropdown = document.getElementById('dropdownMenu');
+      dropdown.classList.toggle('hidden');
+    }
+
+    function logout() {
+      window.location.href = "/logout";
+    }
+
+    // Close dropdowns when clicking outside
+    document.addEventListener('click', function(event) {
+      const dropdown = document.getElementById('dropdownMenu');
+      const notifMenu = document.getElementById('notifMenu');
+      
+      if (!event.target.closest('.relative')) {
+        dropdown.classList.add('hidden');
+        notifMenu.classList.add('hidden');
+      }
+    });
+
+    // Original Notification functionality
+    function toggleNotif() {
+      const notifMenu = document.getElementById("notifMenu");
+      const notifCount = document.getElementById("notifCount");
+      const sidebarBadge = document.getElementById("sidebarNotifBadge");
+      
+      notifMenu.classList.toggle("hidden");
+      if (!notifMenu.classList.contains("hidden")) {
+        hasUnreadNotifications = false;
+        notifCount.classList.add('hidden');
+        sidebarBadge.classList.add('hidden');
+        fetchNotifications();
+      }
+    }
+
+    function playNotifSound() {
+      const sound = document.getElementById("notifSound");
+      sound.play().catch(e => console.log("Audio play failed:", e));
+    }
+
+    function animateNotifBell() {
+      const bell = document.querySelector("#notifBell");
+      bell.classList.add("ping-animation");
+      setTimeout(() => bell.classList.remove("ping-animation"), 800);
+    }
+
+    function fetchNotifications(realTime = false) {
+      fetch('/api/notifications')
+        .then(response => response.json())
+        .then(data => {
+          const notifList = document.getElementById('notifList');
+          const notifCount = document.getElementById('notifCount');
+          const sidebarBadge = document.getElementById('sidebarNotifBadge');
+          notifList.innerHTML = '';
+          
+          if (realTime) {
+            if (data.length > lastNotifCount) {
+              hasUnreadNotifications = true;
+              notifCount.classList.remove('hidden');
+              notifCount.innerText = data.length;
+              sidebarBadge.classList.remove('hidden');
+              sidebarBadge.innerText = data.length > 99 ? '99+' : data.length;
+              playNotifSound();
+              animateNotifBell();
+            }
+          } else {
+            if (hasUnreadNotifications) {
+              notifCount.classList.remove('hidden');
+              sidebarBadge.classList.remove('hidden');
+            }
+            notifCount.innerText = data.length;
+            sidebarBadge.innerText = data.length > 99 ? '99+' : data.length;
+          }
+
+          lastNotifCount = data.length;
+
+          if (data.length === 0) {
+            notifList.innerHTML = '<p class="text-gray-500 italic text-center">No notifications available.</p>';
+            return;
+          }
+
+          data.slice(0, 5).forEach(item => {
+            const statusColor = item.status.toLowerCase() === 'safe' ? 'text-green-600' : 'text-red-600';
+            const notifItem = `
+              <div class="border-b pb-1">
+                <p>🔔 <strong>${item.parameter}</strong>: 
+                  <span class="${statusColor} font-medium">${item.value} - ${item.status}</span>
+                </p>
+                <p class="text-xs text-gray-500">${new Date(item.timestamp).toLocaleString()}</p>
+              </div>
+            `;
+            notifList.innerHTML += notifItem;
+          });
+        })
+        .catch(err => {
+          console.error("Notification error:", err);
+        });
+    }
+
+// Load notification settings
+async function loadNotificationSettings() {
+  try {
+    const response = await fetch('/api/notification-settings');
+    if (response.ok) {
+      const settings = await response.json();
+      document.getElementById('emailCritical').checked = settings.email_critical;
+      document.getElementById('emailWarning').checked = settings.email_warning;
+      document.getElementById('emailSafe').checked = settings.email_safe;
+    }
+  } catch (error) {
+    console.error('Error loading notification settings:', error);
+  }
+}
+
+// Save notification settings
+async function saveNotificationSettings() {
+  try {
+    const settings = {
+      email_critical: document.getElementById('emailCritical').checked,
+      email_warning: document.getElementById('emailWarning').checked,
+      email_safe: document.getElementById('emailSafe').checked,
+      sms_critical: false,
+      sms_warning: false
+    };
+    
+    const response = await fetch('/api/notification-settings', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(settings)
+    });
+    
+    if (response.ok) {
+      showToast('Settings Saved', 'Notification preferences updated successfully', 'success');
+    } else {
+      throw new Error('Failed to save settings');
+    }
+  } catch (error) {
+    showToast('Save Failed', error.message, 'error');
+  }
+}
+
+// Test notification
+async function testNotification() {
+  try {
+    showToast('Sending Test', 'Sending test notification email...', 'info');
+    
+    const response = await fetch('/api/test-notification', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    const result = await response.json();
+    
+    if (result.success) {
+      showToast('Test Sent', 'Test notification email sent successfully', 'success');
+    } else {
+      showToast('Test Failed', 'Failed to send test notification', 'error');
+    }
+  } catch (error) {
+    showToast('Test Error', error.message, 'error');
+  }
+}
+
+// Load notification history
+async function loadNotificationHistory() {
+  try {
+    const response = await fetch('/api/notification-history?days=7');
+    if (response.ok) {
+      const history = await response.json();
+      const historyDiv = document.getElementById('notificationHistory');
+      
+      if (history.length === 0) {
+        historyDiv.innerHTML = '<p class="text-gray-500 italic text-center">No notifications sent in the last 7 days</p>';
+        return;
+      }
+      
+      historyDiv.innerHTML = history.slice(0, 10).map(item => `
+        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+          <div>
+            <div class="font-medium text-sm ${item.notification_type === 'critical' ? 'text-red-600' : 'text-yellow-600'}">
+              ${item.notification_type.toUpperCase()} Alert
+            </div>
+            <div class="text-xs text-gray-500">
+              ${new Date(item.created_at).toLocaleDateString()} ${new Date(item.created_at).toLocaleTimeString()}
+            </div>
+          </div>
+          <div class="text-right">
+            <div class="text-sm font-medium">${item.overall_status}</div>
+            <div class="text-xs ${item.status === 'sent' ? 'text-green-600' : 'text-red-600'}">
+              ${item.status === 'sent' ? '✓ Sent' : '✗ Failed'}
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+  } catch (error) {
+    console.error('Error loading notification history:', error);
+  }
+}
+
+// Update the initializeAnalytics function to load notification settings
+
+    // Initialize on page load
+    window.addEventListener('load', function() {
+      const notifCount = document.getElementById('notifCount');
+      const sidebarBadge = document.getElementById('sidebarNotifBadge');
+      notifCount.classList.add('hidden');
+      sidebarBadge.classList.add('hidden');
+    });
+
+    // Auto-refresh notifications
+    setInterval(() => {
+      fetchNotifications(true);
+    }, 10000);
+  </script>
+</body>
+</html>

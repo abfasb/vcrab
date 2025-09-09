@@ -1,0 +1,1302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>V-CRAB SYSTEM - Dashboard</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+  <style>
+    .sidebar-transition {
+      transition: transform 0.3s ease-in-out;
+    }
+    
+    .main-content-transition {
+      transition: margin-left 0.3s ease-in-out;
+    }
+    
+    .glass-effect {
+      backdrop-filter: blur(10px);
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    
+    .sensor-card {
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    }
+    
+    .chart-container {
+      background: rgba(255, 255, 255, 0.98);
+      backdrop-filter: blur(15px);
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.12);
+    }
+    
+    .chart-controls {
+      background: linear-gradient(135deg, rgba(248, 250, 252, 0.9), rgba(241, 245, 249, 0.9));
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(0, 0, 0, 0.05);
+    }
+    
+    .chart-button {
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      background: linear-gradient(135deg, #f8fafc, #e2e8f0);
+      border: 1px solid rgba(0, 0, 0, 0.1);
+    }
+    
+    .chart-button:hover {
+      background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+      color: white;
+      transform: translateY(-2px);
+      box-shadow: 0 10px 25px rgba(59, 130, 246, 0.3);
+    }
+    
+    .chart-button.active {
+      background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+      color: white;
+      box-shadow: 0 8px 20px rgba(59, 130, 246, 0.4);
+    }
+    
+    .chart-legend {
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(248, 250, 252, 0.95));
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(0, 0, 0, 0.05);
+    }
+    
+    .chart-stats {
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(248, 250, 252, 0.9));
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(0, 0, 0, 0.05);
+    }
+    
+    .logs-container {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    }
+    
+    .topbar {
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(248, 250, 252, 0.95));
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+    
+    .sidebar {
+      background: linear-gradient(180deg, #1e293b 0%, #334155 100%);
+      box-shadow: 4px 0 24px rgba(0, 0, 0, 0.15);
+    }
+    
+    .nav-item {
+      transition: all 0.2s ease-in-out;
+    }
+    
+    .nav-item:hover {
+      transform: translateX(4px);
+      background: rgba(59, 130, 246, 0.1);
+    }
+    
+    .nav-item.active {
+      background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    }
+    
+    .system-status {
+      background: rgba(34, 197, 94, 0.1);
+      border: 1px solid rgba(34, 197, 94, 0.3);
+      color: rgb(34, 197, 94);
+    }
+    
+    .notification-badge {
+      background: linear-gradient(135deg, #ef4444, #dc2626);
+      animation: pulse 2s infinite;
+    }
+    
+    .user-avatar {
+      border: 2px solid rgba(59, 130, 246, 0.3);
+      transition: all 0.2s ease-in-out;
+    }
+    
+    .user-avatar:hover {
+      border-color: rgba(59, 130, 246, 0.6);
+      transform: scale(1.05);
+    }
+    
+    .dropdown-menu {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+    }
+    
+    .mobile-overlay {
+      background: rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(4px);
+    }
+    
+    .chart-zoom-controls {
+      background: rgba(255, 255, 255, 0.9);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(0, 0, 0, 0.1);
+    }
+    
+    .export-button {
+      background: linear-gradient(135deg, #10b981, #059669);
+      transition: all 0.3s ease;
+    }
+    
+    .export-button:hover {
+      background: linear-gradient(135deg, #059669, #047857);
+      transform: translateY(-1px);
+      box-shadow: 0 8px 20px rgba(16, 185, 129, 0.3);
+    }
+    
+    .chart-fullscreen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 9999;
+      background: rgba(255, 255, 255, 0.98);
+      backdrop-filter: blur(20px);
+    }
+    
+    .ping-animation {
+      animation: ping 0.8s ease-in-out;
+    }
+
+    @keyframes ping {
+      0% { transform: scale(1); background-color: #f87171; }
+      50% { transform: scale(1.3); background-color: #ef4444; }
+      100% { transform: scale(1); background-color: #f87171; }
+    }
+    
+    @media (max-width: 1024px) {
+      .sidebar {
+        transform: translateX(-100%);
+        z-index: 1000;
+      }
+      
+      .sidebar-open {
+        transform: translateX(0);
+      }
+      
+      .topbar {
+        left: 0 !important;
+      }
+      
+      .main-content {
+        margin-left: 0 !important;
+        width: 100% !important;
+      }
+      
+      .mobile-menu-button {
+        display: flex;
+      }
+      
+      .desktop-nav {
+        display: none;
+      }
+    }
+    
+    @media (min-width: 1024px) {
+      .mobile-menu-button {
+        display: none;
+      }
+      
+      .desktop-nav {
+        display: flex;
+      }
+    }
+    
+    .status-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.25rem 0.75rem;
+      border-radius: 1rem;
+      font-size: 0.875rem;
+      font-weight: 500;
+    }
+    
+    .status-active {
+      background: rgba(34, 197, 94, 0.1);
+      color: rgb(34, 197, 94);
+      border: 1px solid rgba(34, 197, 94, 0.3);
+    }
+    
+    .status-inactive {
+      background: rgba(239, 68, 68, 0.1);
+      color: rgb(239, 68, 68);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+    
+    .chart-animation {
+      animation: chartFadeIn 0.8s ease-out;
+    }
+    
+    @keyframes chartFadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    .gradient-border {
+      background: linear-gradient(135deg, #3b82f6, #8b5cf6, #ef4444, #10b981);
+      background-size: 400% 400%;
+      animation: gradientShift 3s ease infinite;
+    }
+    
+    @keyframes gradientShift {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+    
+    /* New additions */
+    .sensor-card {
+      transition: all 0.3s ease;
+    }
+    
+    .sensor-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
+    }
+    
+    .alert-warning {
+      background: rgba(234, 179, 8, 0.1);
+      border-left: 4px solid rgb(234, 179, 8);
+    }
+    
+    .alert-danger {
+      background: rgba(239, 68, 68, 0.1);
+      border-left: 4px solid rgb(239, 68, 68);
+    }
+    
+    .alert-success {
+      background: rgba(34, 197, 94, 0.1);
+      border-left: 4px solid rgb(34, 197, 94);
+    }
+    
+    .pulse {
+      animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+  </style>
+</head>
+
+<body class="bg-gradient-to-br from-slate-50 to-blue-50 min-h-screen">
+  <!-- Sidebar -->
+  <div id="sidebar" class="sidebar fixed top-0 left-0 w-72 h-screen z-50 transition-transform duration-300">
+    <div class="p-6 border-b border-slate-600">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+          <span class="text-xl">🦀</span>
+        </div>
+        <div>
+          <h1 class="text-xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+            V-CRAB
+          </h1>
+          <p class="text-xs text-slate-400">Aquaculture System</p>
+        </div>
+      </div>
+    </div>
+    <nav class="mt-8 px-4">
+      <ul class="space-y-2">
+        <li>
+          <a href="{{ url_for('dashboard') }}" class="nav-item active flex items-center gap-3 px-4 py-3 text-white rounded-lg font-medium">
+            <i class="fas fa-home w-4 h-4"></i>
+            <span>Dashboard</span>
+          </a>
+        </li>
+        <li>
+          <a href="{{ url_for('monitoring') }}" class="nav-item flex items-center gap-3 px-4 py-3 text-slate-300 hover:text-white rounded-lg font-medium">
+            <i class="fas fa-desktop w-4 h-4"></i>
+            <span>Monitoring</span>
+          </a>
+        </li>
+        <li>
+          <a href="{{ url_for('controls') }}" class="nav-item flex items-center gap-3 px-4 py-3 text-slate-300 hover:text-white rounded-lg font-medium">
+            <i class="fas fa-sliders-h w-4 h-4"></i>
+            <span>Controls</span>
+          </a>
+        </li>
+        <li>
+          <a href="{{ url_for('analytics') }}" class="nav-item flex items-center gap-3 px-4 py-3 text-slate-300 hover:text-white rounded-lg font-medium">
+            <i class="fas fa-chart-line w-4 h-4"></i>
+            <span>Analytics</span>
+          </a>
+        </li>
+        <li>
+          <a href="{{ url_for('inventory') }}" class="nav-item flex items-center gap-3 px-4 py-3 text-slate-300 hover:text-white rounded-lg font-medium">
+            <i class="fas fa-warehouse w-4 h-4"></i>
+            <span>Inventory</span>
+          </a>
+        </li>
+        <li>
+          <a href="{{ url_for('growth_monitoring') }}" class="nav-item flex items-center gap-3 px-4 py-3 text-slate-300 hover:text-white rounded-lg font-medium">
+            <i class="fas fa-calendar-check w-4 h-4"></i>
+            <span>Crab Growth Monitoring</span>
+          </a>
+        </li>
+        <li>
+          <a href="{{ url_for('reports') }}" class="nav-item flex items-center gap-3 px-4 py-3 text-slate-300 hover:text-white rounded-lg font-medium">
+            <i class="fas fa-file-alt w-4 h-4"></i>
+            <span>Reports</span>
+          </a>
+        </li>
+        <li>
+          <a href="{{ url_for('notification') }}" class="nav-item flex items-center gap-3 px-4 py-3 text-slate-300 hover:text-white rounded-lg font-medium">
+            <i class="fas fa-bell w-4 h-4"></i>
+            <span>Notifications</span>
+            <span id="sidebarNotifBadge" class="ml-auto text-xs px-2 py-1 bg-red-500 rounded-full text-white hidden">0</span>
+          </a>
+        </li>
+      </ul>
+    </nav>
+    
+    <div class="absolute bottom-8 left-4 right-4">
+      <button class="w-full bg-gradient-to-r from-red-500 to-red-600 text-white px-4 py-3 rounded-lg font-semibold hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 flex items-center justify-center gap-2" onclick="logout()">
+        <i class="fas fa-sign-out-alt"></i>
+        <span>Sign Out</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Top Navigation -->
+  <header class="topbar fixed top-0 right-0 h-16 z-40 flex items-center justify-between px-6 lg:left-72">
+    <div class="flex items-center gap-4">
+      <!-- Mobile Menu Button -->
+      <button id="mobileMenuButton" class="mobile-menu-button lg:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors duration-200">
+        <i class="fas fa-bars text-gray-600"></i>
+      </button>
+      
+      <h1 class="text-xl font-semibold text-gray-800">Dashboard</h1>
+    </div>
+    
+    <div class="flex items-center gap-4">
+      <!-- System Status -->
+      <div class="hidden md:flex items-center gap-2 px-3 py-1 system-status rounded-full">
+        <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+        <span class="text-xs font-medium">System Online</span>
+      </div>
+      
+      <!-- Notifications -->
+      <div class="relative">
+        <button onclick="toggleNotif()" id="notifBell" class="p-2 rounded-lg hover:bg-gray-100 transition-colors duration-200 relative">
+          <i class="fas fa-bell text-gray-600"></i>
+          <span id="notifCount" class="absolute -top-1 -right-1 bg-red-500 w-5 h-5 flex items-center justify-center text-xs text-white rounded-full hidden">0</span>
+        </button>
+        <div id="notifMenu" class="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-xl border border-gray-200 py-2 hidden z-50">
+          <h3 class="px-4 py-2 text-gray-700 font-semibold border-b">Crab Environment Status</h3>
+          <div id="notifList" class="max-h-64 overflow-y-auto px-4 py-2 text-sm text-gray-800 space-y-2">
+            <p class="text-gray-500 italic text-center">Loading notifications...</p>
+          </div>
+          <hr class="my-1">
+          <a href="{{ url_for('notification') }}" class="block px-4 py-2 text-blue-600 hover:bg-blue-50 text-center text-sm">View Full Report</a>
+        </div>
+      </div>
+      
+      <!-- User Menu -->
+      <div class="relative">
+        <button class="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-100 transition-colors duration-200" onclick="toggleDropdown()">
+          <img src="{{ url_for('static', filename='images/OIP.jpg') }}" alt="User Avatar" class="user-avatar w-8 h-8 rounded-full">
+          <div class="hidden md:block text-left">
+            <p class="text-sm font-medium text-gray-800">{{ username }}</p>
+            <p class="text-xs text-gray-500">Administrator</p>
+          </div>
+          <i class="fas fa-chevron-down text-xs text-gray-400 hidden md:block"></i>
+        </button>
+        
+        <div id="dropdownMenu" class="dropdown-menu absolute right-0 mt-2 w-56 rounded-lg py-2 hidden z-50">
+          <div class="px-4 py-2 border-b">
+            <p class="text-sm font-medium text-gray-800">My Account</p>
+          </div>
+          <a href="{{ url_for('profile') }}" class="flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-gray-50 transition-colors duration-200">
+            <i class="fas fa-user text-gray-400"></i>
+            <span>Profile Settings</span>
+          </a>
+          <a href="{{ url_for('manage_users') }}" class="flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-gray-50 transition-colors duration-200">
+            <i class="fas fa-users text-gray-400"></i>
+            <span>Manage Users</span>
+          </a>
+          <hr class="my-1">
+          <button onclick="logout()" class="flex items-center gap-3 px-4 py-2 text-red-600 hover:bg-red-50 transition-colors duration-200 w-full text-left">
+            <i class="fas fa-sign-out-alt text-red-400"></i>
+            <span>Sign Out</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Mobile Overlay -->
+  <div id="mobileOverlay" class="mobile-overlay fixed inset-0 z-40 hidden lg:hidden" onclick="closeMobileMenu()"></div>
+
+  <!-- Main Content -->
+  <main id="mainContent" class="main-content-transition pt-20 pb-8 px-6 lg:ml-72">
+    <!-- System Alerts -->
+    <div id="systemAlerts" class="mb-6 space-y-2">
+      <!-- Alerts will be dynamically inserted here -->
+    </div>
+
+    <div class="mb-8">
+      <h2 class="text-3xl font-bold text-gray-800 mb-2">
+        <i class="fas fa-chart-line text-blue-600 mr-3"></i>Real-Time Sensor Dashboard
+      </h2>
+      <p class="text-gray-600">Monitor your aquaculture system parameters in real-time</p>
+    </div>
+
+    <!-- Sensor Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
+      <div class="sensor-card rounded-xl p-6 text-center">
+        <div class="flex items-center justify-center w-16 h-16 bg-gradient-to-r from-red-500 to-orange-500 rounded-full mx-auto mb-4">
+          <i class="fas fa-temperature-high text-white text-2xl"></i>
+        </div>
+        <h3 class="text-2xl font-bold text-gray-800 mb-2" id="temperature">-- °C</h3>
+        <p class="text-gray-600 font-medium mb-3">Temperature</p>
+        <span id="temp-status" class="status-indicator">Loading...</span>
+      </div>
+
+      <div class="sensor-card rounded-xl p-6 text-center">
+        <div class="flex items-center justify-center w-16 h-16 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full mx-auto mb-4">
+          <i class="fas fa-vial text-white text-2xl"></i>
+        </div>
+        <h3 class="text-2xl font-bold text-gray-800 mb-2" id="ph_level">--</h3>
+        <p class="text-gray-600 font-medium mb-3">pH Level</p>
+        <span id="ph-status" class="status-indicator">Loading...</span>
+      </div>
+
+      <div class="sensor-card rounded-xl p-6 text-center">
+        <div class="flex items-center justify-center w-16 h-16 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full mx-auto mb-4">
+          <i class="fas fa-water text-white text-2xl"></i>
+        </div>
+        <h3 class="text-2xl font-bold text-gray-800 mb-2" id="tds_value">-- ppm</h3>
+        <p class="text-gray-600 font-medium mb-3">TDS Value</p>
+        <span id="tds-status" class="status-indicator">Loading...</span>
+      </div>
+
+      <div class="sensor-card rounded-xl p-6 text-center">
+        <div class="flex items-center justify-center w-16 h-16 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full mx-auto mb-4">
+          <i class="fas fa-wave-square text-white text-2xl"></i>
+        </div>
+        <h3 class="text-2xl font-bold text-gray-800 mb-2" id="turbidity">-- NTU</h3>
+        <p class="text-gray-600 font-medium mb-3">Turbidity</p>
+        <span id="turbidity-status" class="status-indicator">Loading...</span>
+      </div>
+    </div>
+
+    <!-- Enhanced Chart Container -->
+    <div class="chart-container rounded-2xl p-8 mb-8 chart-animation">
+      <!-- Chart Header -->
+      <div class="flex flex-col lg:flex-row lg:items-center justify-between mb-8 gap-4">
+        <div class="flex items-center gap-4">
+          <div class="gradient-border p-1 rounded-xl">
+            <div class="bg-white p-3 rounded-lg">
+              <i class="fas fa-chart-area text-blue-600 text-2xl"></i>
+            </div>
+          </div>
+          <div>
+            <h3 class="text-2xl font-bold text-gray-800">Advanced Sensor Analytics</h3>
+            <p class="text-gray-600">Real-time monitoring with intelligent insights</p>
+          </div>
+        </div>
+        
+        <!-- Chart Controls -->
+        <div class="flex flex-wrap items-center gap-3">
+          <div class="chart-controls rounded-xl px-4 py-2 flex items-center gap-2">
+            <i class="fas fa-clock text-gray-500"></i>
+            <span class="text-sm text-gray-600">Live Data</span>
+            <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+          </div>
+          
+          <button onclick="toggleChartType()" class="chart-button px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2">
+            <i class="fas fa-exchange-alt"></i>
+            <span id="chartTypeText">Line Chart</span>
+          </button>
+          
+          <button onclick="toggleFullscreen()" class="chart-button px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2">
+            <i class="fas fa-expand"></i>
+            <span>Fullscreen</span>
+          </button>
+          
+          <button onclick="exportChart()" class="export-button text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2">
+            <i class="fas fa-download"></i>
+            <span>Export</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Chart Stats Row -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div class="chart-stats rounded-xl p-4 text-center">
+          <div class="text-2xl font-bold text-red-500" id="tempAvg">--</div>
+          <div class="text-sm text-gray-600">Avg Temp</div>
+        </div>
+        <div class="chart-stats rounded-xl p-4 text-center">
+          <div class="text-2xl font-bold text-blue-500" id="phAvg">--</div>
+          <div class="text-sm text-gray-600">Avg pH</div>
+        </div>
+        <div class="chart-stats rounded-xl p-4 text-center">
+          <div class="text-2xl font-bold text-green-500" id="tdsAvg">--</div>
+          <div class="text-sm text-gray-600">Avg TDS</div>
+        </div>
+        <div class="chart-stats rounded-xl p-4 text-center">
+          <div class="text-2xl font-bold text-purple-500" id="turbAvg">--</div>
+          <div class="text-sm text-gray-600">Avg Turbidity</div>
+        </div>
+      </div>
+
+      <!-- Chart Legend -->
+      <div class="chart-legend rounded-xl p-4 mb-6">
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div class="flex items-center gap-3">
+            <div class="w-4 h-4 bg-gradient-to-r from-red-500 to-orange-500 rounded-full"></div>
+            <span class="text-sm font-medium text-gray-700">Temperature (°C)</span>
+            <span class="text-xs text-gray-500" id="tempRange">0-50</span>
+          </div>
+          <div class="flex items-center gap-3">
+            <div class="w-4 h-4 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full"></div>
+            <span class="text-sm font-medium text-gray-700">pH Level</span>
+            <span class="text-xs text-gray-500" id="phRange">0-14</span>
+          </div>
+          <div class="flex items-center gap-3">
+            <div class="w-4 h-4 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full"></div>
+            <span class="text-sm font-medium text-gray-700">TDS (ppm)</span>
+            <span class="text-xs text-gray-500" id="tdsRange">0-2000</span>
+          </div>
+          <div class="flex items-center gap-3">
+            <div class="w-4 h-4 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full"></div>
+            <span class="text-sm font-medium text-gray-700">Turbidity (NTU)</span>
+            <span class="text-xs text-gray-500" id="turbRange">0-100</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Chart Canvas -->
+      <div class="relative">
+        <div class="absolute top-4 right-4 z-10 chart-zoom-controls rounded-lg p-2 flex gap-2">
+          <button onclick="resetZoom()" class="p-2 hover:bg-gray-100 rounded-lg transition-colors" title="Reset Zoom">
+            <i class="fas fa-search-minus text-gray-600"></i>
+          </button>
+          <button onclick="autoScale()" class="p-2 hover:bg-gray-100 rounded-lg transition-colors" title="Auto Scale">
+            <i class="fas fa-expand-arrows-alt text-gray-600"></i>
+          </button>
+        </div>
+        <div class="h-96 lg:h-[500px]">
+          <canvas id="sensorChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Chart Footer -->
+      <div class="flex flex-col lg:flex-row justify-between items-center mt-6 pt-6 border-t border-gray-200 gap-4">
+        <div class="flex items-center gap-4 text-sm text-gray-600">
+          <div class="flex items-center gap-2">
+            <i class="fas fa-database"></i>
+            <span>Data Points: <span id="dataPointCount">0</span></span>
+          </div>
+          <div class="flex items-center gap-2">
+            <i class="fas fa-sync-alt"></i>
+            <span>Last Update: <span id="lastUpdate">--</span></span>
+          </div>
+        </div>
+        <div class="flex items-center gap-2 text-sm">
+          <div class="flex items-center gap-2 px-3 py-1 bg-green-100 text-green-800 rounded-full">
+            <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+            <span>Real-time Active</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- System Logs -->
+    <div class="logs-container rounded-xl p-6">
+      <div class="flex items-center justify-between mb-6">
+        <h3 class="text-xl font-bold text-gray-800">
+          <i class="fas fa-clipboard-list text-blue-600 mr-2"></i>System Logs
+        </h3>
+        <button class="flex items-center space-x-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors duration-200" onclick="fetchLogs()">
+          <i class="fas fa-refresh"></i>
+          <span>Refresh</span>
+        </button>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full">
+          <thead>
+            <tr class="border-b-2 border-gray-200">
+              <th class="text-left py-3 px-4 font-semibold text-gray-700">Timestamp</th>
+              <th class="text-left py-3 px-4 font-semibold text-gray-700">Status</th>
+            </tr>
+          </thead>
+          <tbody id="logsTable" class="divide-y divide-gray-200">
+            <tr>
+              <td class="py-3 px-4 text-gray-600">Loading logs...</td>
+              <td class="py-3 px-4"></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <audio id="notifSound" src="https://notificationsounds.com/storage/sounds/file-sounds-1150-pristine.mp3" preload="auto"></audio>
+
+  <script>
+    // Global variables
+    let currentChartType = 'line';
+    let isFullscreen = false;
+    let sensorChart;
+    let dataUpdateInterval;
+    let notificationInterval;
+    let logsUpdateInterval;
+    let lastNotifCount = 0;
+    let hasUnreadNotifications = false;
+    let socket;
+    
+    // Thresholds for alerts
+    const thresholds = {
+      temperature: { min: 20, max: 30 },
+      ph_level: { min: 6.5, max: 8.5 },
+      tds_value: { min: 500, max: 1500 },
+      turbidity: { min: 0, max: 50 }
+    };
+
+    // Initialize the dashboard when DOM is loaded
+    document.addEventListener('DOMContentLoaded', function() {
+      initializeChart();
+      setupEventListeners();
+      startDataUpdates();
+      fetchLogs();
+      fetchNotifications();
+      initializeSocketIO();
+    });
+
+    // Initialize Socket.IO for real-time notifications
+    function initializeSocketIO() {
+      socket = io();
+      
+      socket.on('new_notification', function(data) {
+        console.log('Real-time notification received:', data);
+        playNotifSound();
+        animateNotifBell();
+        
+        // Update notification count
+        fetchNotifications(true);
+      });
+      
+      socket.on('connect', function() {
+        console.log('Connected to server for real-time notifications');
+      });
+      
+      socket.on('disconnect', function() {
+        console.log('Disconnected from server');
+      });
+    }
+
+    function initializeChart() {
+      const ctx = document.getElementById("sensorChart").getContext("2d");
+      sensorChart = new Chart(ctx, {
+        type: "line",
+        data: {
+          labels: [],
+          datasets: [
+            {
+              label: "Temperature (°C)",
+              borderColor: "#EF4444",
+              backgroundColor: "rgba(239, 68, 68, 0.1)",
+              data: [],
+              fill: true,
+              borderWidth: 3,
+              tension: 0.4,
+              pointBackgroundColor: "#EF4444",
+              pointBorderColor: "#FFFFFF",
+              pointBorderWidth: 2,
+              pointRadius: 5,
+              pointHoverRadius: 8,
+              pointHoverBackgroundColor: "#EF4444",
+              pointHoverBorderColor: "#FFFFFF",
+              pointHoverBorderWidth: 3
+            },
+            {
+              label: "pH Level",
+              borderColor: "#3B82F6",
+              backgroundColor: "rgba(59, 130, 246, 0.1)",
+              data: [],
+              fill: true,
+              borderWidth: 3,
+              tension: 0.4,
+              pointBackgroundColor: "#3B82F6",
+              pointBorderColor: "#FFFFFF",
+              pointBorderWidth: 2,
+              pointRadius: 5,
+              pointHoverRadius: 8,
+              pointHoverBackgroundColor: "#3B82F6",
+              pointHoverBorderColor: "#FFFFFF",
+              pointHoverBorderWidth: 3
+            },
+            {
+              label: "TDS Value (ppm)",
+              borderColor: "#10B981",
+              backgroundColor: "rgba(16, 185, 129, 0.1)",
+              data: [],
+              fill: true,
+              borderWidth: 3,
+              tension: 0.4,
+              pointBackgroundColor: "#10B981",
+              pointBorderColor: "#FFFFFF",
+              pointBorderWidth: 2,
+              pointRadius: 5,
+              pointHoverRadius: 8,
+              pointHoverBackgroundColor: "#10B981",
+              pointHoverBorderColor: "#FFFFFF",
+              pointHoverBorderWidth: 3
+            },
+            {
+              label: "Turbidity (NTU)",
+              borderColor: "#8B5CF6",
+              backgroundColor: "rgba(139, 92, 246, 0.1)",
+              data: [],
+              fill: true,
+              borderWidth: 3,
+              tension: 0.4,
+              pointBackgroundColor: "#8B5CF6",
+              pointBorderColor: "#FFFFFF",
+              pointBorderWidth: 2,
+              pointRadius: 5,
+              pointHoverRadius: 8,
+              pointHoverBackgroundColor: "#8B5CF6",
+              pointHoverBorderColor: "#FFFFFF",
+              pointHoverBorderWidth: 3
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: {
+            duration: 1000,
+            easing: 'easeInOutQuart'
+          },
+          plugins: {
+            legend: {
+              display: false
+            },
+            tooltip: {
+              mode: "index",
+              intersect: false,
+              backgroundColor: "rgba(0, 0, 0, 0.9)",
+              titleColor: "#FFFFFF",
+              bodyColor: "#FFFFFF",
+              borderColor: "rgba(255, 255, 255, 0.2)",
+              borderWidth: 1,
+              cornerRadius: 12,
+              displayColors: true,
+              callbacks: {
+                title: function(context) {
+                  return `Time: ${context[0].label}`;
+                },
+                label: function(context) {
+                  return `${context.dataset.label}: ${context.parsed.y}`;
+                }
+              }
+            }
+          },
+          interaction: {
+            mode: "nearest",
+            intersect: false
+          },
+          scales: {
+            x: {
+              grid: { 
+                color: "rgba(0, 0, 0, 0.05)",
+                drawBorder: false
+              },
+              ticks: { 
+                color: "#6B7280",
+                font: { size: 12, weight: '500' },
+                maxTicksLimit: 8
+              }
+            },
+            y: {
+              beginAtZero: true,
+              grid: { 
+                color: "rgba(0, 0, 0, 0.05)",
+                drawBorder: false
+              },
+              ticks: { 
+                color: "#6B7280",
+                font: { size: 12, weight: '500' }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    function setupEventListeners() {
+      // Mobile menu functionality
+      const mobileMenuButton = document.getElementById('mobileMenuButton');
+      const sidebar = document.getElementById('sidebar');
+      const mobileOverlay = document.getElementById('mobileOverlay');
+
+      mobileMenuButton.addEventListener('click', () => {
+        sidebar.classList.add('sidebar-open');
+        mobileOverlay.classList.remove('hidden');
+      });
+
+      // Close mobile menu when clicking on navigation links
+      document.querySelectorAll('.nav-item').forEach(item => {
+        item.addEventListener('click', () => {
+          if (window.innerWidth < 1024) {
+            closeMobileMenu();
+          }
+        });
+      });
+    }
+
+    function closeMobileMenu() {
+      document.getElementById('sidebar').classList.remove('sidebar-open');
+      document.getElementById('mobileOverlay').classList.add('hidden');
+    }
+
+    function startDataUpdates() {
+      // Initial fetch
+      fetchData();
+      
+      // Set up intervals
+      dataUpdateInterval = setInterval(fetchData, 5000);
+      notificationInterval = setInterval(() => fetchNotifications(true), 10000);
+      logsUpdateInterval = setInterval(fetchLogs, 30000);
+    }
+
+    function fetchData() {
+      fetch("/fetch_data")
+        .then(response => {
+          if (!response.ok) throw new Error('Network response was not ok');
+          return response.json();
+        })
+        .then(data => {
+          // Update sensor values
+          updateSensorDisplay(data);
+          
+          // Update the chart with new data
+          updateChartData(data);
+          
+          // Check for threshold alerts
+          checkThresholds(data);
+        })
+        .catch(error => {
+          console.error("Error fetching data:", error);
+          showConnectionError();
+        });
+    }
+
+    function updateSensorDisplay(data) {
+      // Update ESP32_1 Data (Temperature and pH)
+      if (data.temperature !== undefined) {
+        document.getElementById("temperature").innerText = data.temperature + " °C";
+        updateStatus("temp-status", data.temperature > 0);
+      }
+      if (data.ph_level !== undefined) {
+        document.getElementById("ph_level").innerText = data.ph_level;
+        updateStatus("ph-status", data.ph_level >= 0);
+      }
+
+      // Update ESP32_2 Data (TDS and Turbidity)
+      if (data.tds_value !== undefined) {
+        document.getElementById("tds_value").innerText = data.tds_value + " ppm";
+        updateStatus("tds-status", data.tds_value > 0);
+      }
+      if (data.turbidity !== undefined) {
+        document.getElementById("turbidity").innerText = data.turbidity + " NTU";
+        updateStatus("turbidity-status", data.turbidity > 0);
+      }
+    }
+
+    function updateStatus(id, isActive) {
+      const elem = document.getElementById(id);
+      elem.className = `status-indicator ${isActive ? 'status-active' : 'status-inactive'}`;
+      elem.innerHTML = isActive ? '<i class="fas fa-check-circle"></i> Active' : '<i class="fas fa-times-circle"></i> Inactive';
+    }
+
+    function updateChartData(data) {
+      const time = new Date().toLocaleTimeString();
+
+      // Add data to the chart
+      sensorChart.data.labels.push(time);
+      
+      if (data.temperature !== undefined) {
+        sensorChart.data.datasets[0].data.push(data.temperature);
+      }
+      if (data.ph_level !== undefined) {
+        sensorChart.data.datasets[1].data.push(data.ph_level);
+      }
+      if (data.tds_value !== undefined) {
+        sensorChart.data.datasets[2].data.push(data.tds_value);
+      }
+      if (data.turbidity !== undefined) {
+        sensorChart.data.datasets[3].data.push(data.turbidity);
+      }
+
+      // Keep only the last 20 readings
+      if (sensorChart.data.labels.length > 20) {
+        sensorChart.data.labels.shift();
+        sensorChart.data.datasets.forEach(dataset => dataset.data.shift());
+      }
+
+      sensorChart.update();
+      updateChartStats();
+    }
+
+    function updateChartStats() {
+      // Calculate averages
+      const tempData = sensorChart.data.datasets[0].data;
+      const phData = sensorChart.data.datasets[1].data;
+      const tdsData = sensorChart.data.datasets[2].data;
+      const turbData = sensorChart.data.datasets[3].data;
+
+      const tempAvg = tempData.length > 0 ? 
+        (tempData.reduce((a, b) => a + b, 0)) / tempData.length : '--';
+      const phAvg = phData.length > 0 ? 
+        (phData.reduce((a, b) => a + b, 0)) / phData.length : '--';
+      const tdsAvg = tdsData.length > 0 ? 
+        (tdsData.reduce((a, b) => a + b, 0) / tdsData.length) : '--';
+      const turbAvg = turbData.length > 0 ? 
+        (turbData.reduce((a, b) => a + b, 0) / turbData.length) : '--';
+
+      document.getElementById('tempAvg').textContent = tempAvg.toFixed(1);
+      document.getElementById('phAvg').textContent = phAvg.toFixed(1);
+      document.getElementById('tdsAvg').textContent = tdsAvg.toFixed(0);
+      document.getElementById('turbAvg').textContent = turbAvg.toFixed(1);
+
+      // Update data point count
+      document.getElementById('dataPointCount').textContent = sensorChart.data.labels.length;
+      
+      // Update last update time
+      document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
+    }
+
+    function checkThresholds(data) {
+      const alertsContainer = document.getElementById('systemAlerts');
+      alertsContainer.innerHTML = '';
+      
+      // Check each parameter against thresholds
+      if (data.temperature !== undefined) {
+        if (data.temperature < thresholds.temperature.min) {
+          addAlert('warning', 'Low Temperature', `Temperature is below minimum threshold (${data.temperature}°C < ${thresholds.temperature.min}°C)`);
+        } else if (data.temperature > thresholds.temperature.max) {
+          addAlert('danger', 'High Temperature', `Temperature is above maximum threshold (${data.temperature}°C > ${thresholds.temperature.max}°C)`);
+        }
+      }
+      
+      if (data.ph_level !== undefined) {
+        if (data.ph_level < thresholds.ph_level.min) {
+          addAlert('warning', 'Low pH Level', `pH is below minimum threshold (${data.ph_level} < ${thresholds.ph_level.min})`);
+        } else if (data.ph_level > thresholds.ph_level.max) {
+          addAlert('danger', 'High pH Level', `pH is above maximum threshold (${data.ph_level} > ${thresholds.ph_level.max})`);
+        }
+      }
+      
+      if (data.tds_value !== undefined) {
+        if (data.tds_value < thresholds.tds_value.min) {
+          addAlert('warning', 'Low TDS Value', `TDS is below minimum threshold (${data.tds_value}ppm < ${thresholds.tds_value.min}ppm)`);
+        } else if (data.tds_value > thresholds.tds_value.max) {
+          addAlert('danger', 'High TDS Value', `TDS is above maximum threshold (${data.tds_value}ppm > ${thresholds.tds_value.max}ppm)`);
+        }
+      }
+      
+      if (data.turbidity !== undefined) {
+        if (data.turbidity > thresholds.turbidity.max) {
+          addAlert('danger', 'High Turbidity', `Turbidity is above maximum threshold (${data.turbidity}NTU > ${thresholds.turbidity.max}NTU)`);
+        }
+      }
+    }
+
+    function addAlert(type, title, message) {
+      const alertsContainer = document.getElementById('systemAlerts');
+      const alertClass = type === 'danger' ? 'alert-danger' : type === 'success' ? 'alert-success' : 'alert-warning';
+      
+      const alertDiv = document.createElement('div');
+      alertDiv.className = `p-4 rounded-lg ${alertClass} flex items-start justify-between`;
+      alertDiv.innerHTML = `
+        <div class="flex items-start">
+          <i class="fas ${type === 'danger' ? 'fa-exclamation-triangle' : type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'} mt-1 mr-3"></i>
+          <div>
+            <h4 class="font-bold">${title}</h4>
+            <p class="text-sm">${message}</p>
+          </div>
+        </div>
+        <button class="ml-4 text-gray-500 hover:text-gray-700" onclick="this.parentElement.remove()">
+          <i class="fas fa-times"></i>
+        </button>
+      `;
+      
+      alertsContainer.appendChild(alertDiv);
+    }
+
+    function showConnectionError() {
+      const alertsContainer = document.getElementById('systemAlerts');
+      alertsContainer.innerHTML = `
+        <div class="p-4 rounded-lg alert-danger flex items-start justify-between">
+          <div class="flex items-start">
+            <i class="fas fa-exclamation-triangle mt-1 mr-3"></i>
+            <div>
+              <h4 class="font-bold">Connection Error</h4>
+              <p class="text-sm">Unable to fetch sensor data. Trying to reconnect...</p>
+            </div>
+          </div>
+          <div class="ml-4">
+            <i class="fas fa-sync-alt animate-spin"></i>
+          </div>
+        </div>
+      `;
+    }
+
+    function fetchLogs() {
+      fetch("/fetch_logs")
+        .then(response => {
+          if (!response.ok) throw new Error('Network response was not ok');
+          return response.json();
+        })
+        .then(logs => {
+          const logsTable = document.getElementById("logsTable");
+          logsTable.innerHTML = "";
+          
+          if (logs.length === 0) {
+            logsTable.innerHTML = `
+              <tr>
+                <td colspan="2" class="py-3 px-4 text-gray-500 italic text-center">No logs available</td>
+              </tr>
+            `;
+            return;
+          }
+          
+          logs.forEach(log => {
+            const statusClass = log.status === 'warning' ? 'text-yellow-600' : 
+                              log.status === 'error' ? 'text-red-600' : 'text-green-600';
+            const statusText = log.status === 'warning' ? 'Warning' : 
+                              log.status === 'error' ? 'Error' : 'Normal';
+                              
+            logsTable.innerHTML += `
+              <tr class="hover:bg-gray-50 transition-colors duration-200">
+                <td class="py-3 px-4 text-gray-700">${new Date(log.timestamp).toLocaleString()}</td>
+                <td class="py-3 px-4">
+                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusClass === 'text-yellow-600' ? 'bg-yellow-100 text-yellow-800' : statusClass === 'text-red-600' ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}">
+                    ${statusText}
+                  </span>
+                </td>
+              </tr>
+            `;
+          });
+        })
+        .catch(error => {
+          console.error("Error fetching logs:", error);
+          document.getElementById("logsTable").innerHTML = `
+            <tr>
+              <td colspan="2" class="py-3 px-4 text-red-600">Error loading logs. Please try again.</td>
+            </tr>
+          `;
+        });
+    }
+
+    // Notification functionality
+    function toggleNotif() {
+      const notifMenu = document.getElementById("notifMenu");
+      const notifCount = document.getElementById("notifCount");
+      const sidebarBadge = document.getElementById("sidebarNotifBadge");
+      
+      notifMenu.classList.toggle("hidden");
+
+      if (!notifMenu.classList.contains("hidden")) {
+        hasUnreadNotifications = false;
+        notifCount.classList.add('hidden');
+        sidebarBadge.classList.add('hidden');
+        fetchNotifications();
+      }
+    }
+
+    function playNotifSound() {
+      const sound = document.getElementById("notifSound");
+      sound.play().catch(e => console.log("Audio play failed:", e));
+    }
+
+    function animateNotifBell() {
+      const bell = document.querySelector("#notifBell");
+      bell.classList.add("ping-animation");
+      setTimeout(() => bell.classList.remove("ping-animation"), 800);
+    }
+
+    // Fetch notifications
+    function fetchNotifications(realTime = false) {
+      fetch('/api/notifications')
+        .then(response => response.json())
+        .then(data => {
+          const notifList = document.getElementById('notifList');
+          const notifCount = document.getElementById('notifCount');
+          const sidebarBadge = document.getElementById('sidebarNotifBadge');
+
+          notifList.innerHTML = '';
+
+          if (realTime) {
+            if (data.length > lastNotifCount) {
+              hasUnreadNotifications = true;
+              notifCount.classList.remove('hidden');
+              notifCount.innerText = data.length;
+              sidebarBadge.classList.remove('hidden');
+              sidebarBadge.innerText = data.length > 99 ? '99+' : data.length;
+            }
+          } else {
+            if (hasUnreadNotifications) {
+              notifCount.classList.remove('hidden');
+              sidebarBadge.classList.remove('hidden');
+            }
+            notifCount.innerText = data.length;
+            sidebarBadge.innerText = data.length > 99 ? '99+' : data.length;
+          }
+
+          lastNotifCount = data.length;
+
+          if (data.length === 0) {
+            notifList.innerHTML = '<p class="text-gray-500 italic text-center">No notifications available.</p>';
+            return;
+          }
+
+          data.slice(0, 5).forEach(item => {
+            const statusColor = item.status.toLowerCase() === 'safe' ? 'text-green-600' : 'text-red-600';
+            const notifItem = `
+              <div class="border-b pb-1">
+                <p>🔔 <strong>${item.parameter}</strong>: 
+                  <span class="${statusColor} font-medium">${item.value} - ${item.status}</span>
+                </p>
+                <p class="text-xs text-gray-500">${new Date(item.timestamp).toLocaleString()}</p>
+              </div>
+            `;
+            notifList.innerHTML += notifItem;
+          });
+        })
+        .catch(err => {
+          console.error("Notification error:", err);
+        });
+    }
+        
+    // Chart control functions
+    function toggleChartType() {
+      currentChartType = currentChartType === 'line' ? 'bar' : 'line';
+      document.getElementById('chartTypeText').textContent = 
+        currentChartType === 'line' ? 'Line Chart' : 'Bar Chart';
+      
+      sensorChart.config.type = currentChartType;
+      sensorChart.update('active');
+    }
+
+    function toggleFullscreen() {
+      const chartContainer = document.querySelector('.chart-container');
+      
+      if (!isFullscreen) {
+        chartContainer.classList.add('chart-fullscreen');
+        isFullscreen = true;
+        
+        // Add close button
+        const closeBtn = document.createElement('button');
+        closeBtn.innerHTML = '<i class="fas fa-times"></i>';
+        closeBtn.className = 'absolute top-4 right-4 z-20 p-3 bg-white rounded-full shadow-lg hover:bg-gray-100 transition-colors';
+        closeBtn.onclick = toggleFullscreen;
+        chartContainer.appendChild(closeBtn);
+        
+        sensorChart.resize();
+      } else {
+        chartContainer.classList.remove('chart-fullscreen');
+        isFullscreen = false;
+        
+        // Remove close button
+        const closeBtn = chartContainer.querySelector('button');
+        if (closeBtn) closeBtn.remove();
+        
+        sensorChart.resize();
+      }
+    }
+
+    function exportChart() {
+      const link = document.createElement('a');
+      link.download = `sensor-data-${new Date().toISOString().split('T')[0]}.png`;
+      link.href = sensorChart.toBase64Image();
+      link.click();
+    }
+
+    function resetZoom() {
+      sensorChart.resetZoom();
+    }
+
+    function autoScale() {
+      sensorChart.options.scales.y.min = undefined;
+      sensorChart.options.scales.y.max = undefined;
+      sensorChart.update();
+    }
+
+    // User dropdown
+    function toggleDropdown() {
+      const dropdown = document.getElementById('dropdownMenu');
+      dropdown.classList.toggle('hidden');
+      
+      // Close dropdown when clicking outside
+      document.addEventListener('click', function(event) {
+        if (!event.target.closest('.relative')) {
+          dropdown.classList.add('hidden');
+        }
+      }, { once: true });
+    }
+
+    function logout() {
+      // Clear intervals before logout
+      clearInterval(dataUpdateInterval);
+      clearInterval(notificationInterval);
+      clearInterval(logsUpdateInterval);
+      
+      window.location.href = "/logout";
+    }
+
+    // Close dropdowns when clicking outside
+    document.addEventListener('click', function(event) {
+      const dropdown = document.getElementById('dropdownMenu');
+      const notifMenu = document.getElementById('notifMenu');
+      
+      if (!event.target.closest('.relative')) {
+        dropdown.classList.add('hidden');
+        notifMenu.classList.add('hidden');
+      }
+    });
+
+    // Initialize on page load
+    window.addEventListener('load', function() {
+      const notifCount = document.getElementById('notifCount');
+      const sidebarBadge = document.getElementById('sidebarNotifBadge');
+      notifCount.classList.add('hidden');
+      sidebarBadge.classList.add('hidden');
+    });
+
+    // Clean up intervals when page is unloaded
+    window.addEventListener('beforeunload', function() {
+      clearInterval(dataUpdateInterval);
+      clearInterval(notificationInterval);
+      clearInterval(logsUpdateInterval);
+    });
+  </script>
+</body>
+</html>

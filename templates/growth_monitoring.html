@@ -1,0 +1,1176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VCrab Growth Monitoring - 80 Box Farm</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <style>
+        .sidebar-transition {
+            transition: transform 0.3s ease-in-out;
+        }
+        
+        .main-content-transition {
+            transition: margin-left 0.3s ease-in-out;
+        }
+        
+        .crab-box {
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+        
+        .crab-box:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        .crab-box.empty {
+            background: linear-gradient(135deg, #6b7280, #9ca3af);
+        }
+        
+        .crab-box.alive {
+            background: linear-gradient(135deg, #10b981, #059669);
+        }
+        
+        .crab-box.dead {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+        }
+        
+        .crab-box.ready-harvest {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            animation: pulse 2s infinite;
+        }
+        
+        .modal {
+            backdrop-filter: blur(8px);
+        }
+        
+        .growth-chart {
+            max-height: 300px;
+        }
+        
+        .feed-type-tamban { background: #8b5cf6; }
+        .feed-type-kuhol { background: #06b6d4; }
+        .feed-type-feeds { background: #10b981; }
+        
+        .topbar {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(248, 250, 252, 0.95));
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        
+        .sidebar {
+            background: linear-gradient(180deg, #1e293b 0%, #334155 100%);
+            box-shadow: 4px 0 24px rgba(0, 0, 0, 0.15);
+        }
+        
+        .nav-item {
+            transition: all 0.2s ease-in-out;
+        }
+        
+        .nav-item:hover {
+            transform: translateX(4px);
+            background: rgba(59, 130, 246, 0.1);
+        }
+        
+        .nav-item.active {
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        }
+        
+        .system-status {
+            background: rgba(34, 197, 94, 0.1);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+            color: rgb(34, 197, 94);
+        }
+        
+        .notification-badge {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            animation: pulse 2s infinite;
+        }
+        
+        .user-avatar {
+            border: 2px solid rgba(59, 130, 246, 0.3);
+            transition: all 0.2s ease-in-out;
+        }
+        
+        .user-avatar:hover {
+            border-color: rgba(59, 130, 246, 0.6);
+            transform: scale(1.05);
+        }
+        
+        .dropdown-menu {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+        }
+        
+        .mobile-overlay {
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+        }
+        
+        @media (max-width: 1024px) {
+            .sidebar {
+                transform: translateX(-100%);
+                z-index: 1000;
+            }
+            
+            .sidebar-open {
+                transform: translateX(0);
+            }
+            
+            .topbar {
+                left: 0 !important;
+            }
+            
+            .main-content {
+                margin-left: 0 !important;
+                width: 100% !important;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Added sidebar from dashboard -->
+    <!-- Sidebar -->
+    <div id="sidebar" class="sidebar fixed top-0 left-0 w-72 h-screen z-50 transition-transform duration-300">
+        <div class="p-6 border-b border-slate-600">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+                    <span class="text-xl">🦀</span>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+                        V-CRAB
+                    </h1>
+                    <p class="text-xs text-slate-400">Aquaculture System</p>
+                </div>
+            </div>
+        </div>
+        <nav class="mt-8 px-4">
+            <ul class="space-y-2">
+                <li>
+                    <a href="{{ url_for('dashboard') }}" class="nav-item flex items-center gap-3 px-4 py-3 text-slate-300 hover:text-white rounded-lg font-medium">
+                        <i class="fas fa-home w-4 h-4"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('monitoring') }}" class="nav-item flex items-center gap-3 px-4 py-3 text-slate-300 hover:text-white rounded-lg font-medium">
+                        <i class="fas fa-desktop w-4 h-4"></i>
+                        <span>Monitoring</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('controls') }}" class="nav-item flex items-center gap-3 px-4 py-3 text-slate-300 hover:text-white rounded-lg font-medium">
+                        <i class="fas fa-sliders-h w-4 h-4"></i>
+                        <span>Controls</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('analytics') }}" class="nav-item flex items-center gap-3 px-4 py-3 text-slate-300 hover:text-white rounded-lg font-medium">
+                        <i class="fas fa-chart-line w-4 h-4"></i>
+                        <span>Analytics</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('inventory') }}" class="nav-item flex items-center gap-3 px-4 py-3 text-slate-300 hover:text-white rounded-lg font-medium">
+                        <i class="fas fa-warehouse w-4 h-4"></i>
+                        <span>Inventory</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('growth_monitoring') }}" class="nav-item active flex items-center gap-3 px-4 py-3 text-white rounded-lg font-medium">
+                        <i class="fas fa-calendar-check w-4 h-4"></i>
+                        <span>Crab Growth Monitoring</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('reports') }}" class="nav-item flex items-center gap-3 px-4 py-3 text-slate-300 hover:text-white rounded-lg font-medium">
+                        <i class="fas fa-file-alt w-4 h-4"></i>
+                        <span>Reports</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('notification') }}" class="nav-item flex items-center gap-3 px-4 py-3 text-slate-300 hover:text-white rounded-lg font-medium">
+                        <i class="fas fa-bell w-4 h-4"></i>
+                        <span>Notifications</span>
+                        <span id="sidebarNotifBadge" class="ml-auto text-xs px-2 py-1 bg-red-500 rounded-full text-white hidden">0</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+        
+        <div class="absolute bottom-8 left-4 right-4">
+            <button class="w-full bg-gradient-to-r from-red-500 to-red-600 text-white px-4 py-3 rounded-lg font-semibold hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 flex items-center justify-center gap-2" onclick="logout()">
+                <i class="fas fa-sign-out-alt"></i>
+                <span>Sign Out</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Added topbar from dashboard -->
+    <!-- Top Navigation -->
+    <header class="topbar fixed top-0 right-0 h-16 z-40 flex items-center justify-between px-6 lg:left-72">
+        <div class="flex items-center gap-4">
+            <!-- Mobile Menu Button -->
+            <button id="mobileMenuButton" class="mobile-menu-button lg:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors duration-200">
+                <i class="fas fa-bars text-gray-600"></i>
+            </button>
+            
+            <h1 class="text-xl font-semibold text-gray-800">Crab Growth Monitoring</h1>
+        </div>
+        
+        <div class="flex items-center gap-4">
+            <!-- System Status -->
+            <div class="hidden md:flex items-center gap-2 px-3 py-1 system-status rounded-full">
+                <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                <span class="text-xs font-medium">80-Box Farm Online</span>
+            </div>
+            
+            <!-- Statistics Button -->
+            <button onclick="showStatistics()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                <i class="fas fa-chart-bar mr-2"></i>Statistics
+            </button>
+            
+            <!-- Notifications -->
+            <div class="relative">
+                <button onclick="toggleNotif()" id="notifBell" class="p-2 rounded-lg hover:bg-gray-100 transition-colors duration-200 relative">
+                    <i class="fas fa-bell text-gray-600"></i>
+                    <span id="notifCount" class="absolute -top-1 -right-1 bg-red-500 w-5 h-5 flex items-center justify-center text-xs text-white rounded-full hidden">0</span>
+                </button>
+                <div id="notifMenu" class="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-xl border border-gray-200 py-2 hidden z-50">
+                    <h3 class="px-4 py-2 text-gray-700 font-semibold border-b">Crab Environment Status</h3>
+                    <div id="notifList" class="max-h-64 overflow-y-auto px-4 py-2 text-sm text-gray-800 space-y-2">
+                        <p class="text-gray-500 italic text-center">Loading notifications...</p>
+                    </div>
+                    <hr class="my-1">
+                    <a href="{{ url_for('notification') }}" class="block px-4 py-2 text-blue-600 hover:bg-blue-50 text-center text-sm">View Full Report</a>
+                </div>
+            </div>
+            
+            <!-- User Menu -->
+            <div class="relative">
+                <button class="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-100 transition-colors duration-200" onclick="toggleDropdown()">
+                    <img src="{{ url_for('static', filename='images/OIP.jpg') }}" alt="User Avatar" class="user-avatar w-8 h-8 rounded-full">
+                    <div class="hidden md:block text-left">
+                        <p class="text-sm font-medium text-gray-800">{{ username }}</p>
+                        <p class="text-xs text-gray-500">Administrator</p>
+                    </div>
+                    <i class="fas fa-chevron-down text-xs text-gray-400 hidden md:block"></i>
+                </button>
+                
+                <div id="dropdownMenu" class="dropdown-menu absolute right-0 mt-2 w-56 rounded-lg py-2 hidden z-50">
+                    <div class="px-4 py-2 border-b">
+                        <p class="text-sm font-medium text-gray-800">My Account</p>
+                    </div>
+                    <a href="{{ url_for('profile') }}" class="flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-gray-50 transition-colors duration-200">
+                        <i class="fas fa-user text-gray-400"></i>
+                        <span>Profile Settings</span>
+                    </a>
+                    <a href="{{ url_for('manage_users') }}" class="flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-gray-50 transition-colors duration-200">
+                        <i class="fas fa-users text-gray-400"></i>
+                        <span>Manage Users</span>
+                    </a>
+                    <hr class="my-1">
+                    <button onclick="logout()" class="flex items-center gap-3 px-4 py-2 text-red-600 hover:bg-red-50 transition-colors duration-200 w-full text-left">
+                        <i class="fas fa-sign-out-alt text-red-400"></i>
+                        <span>Sign Out</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Updated main content to work with sidebar layout -->
+    <!-- Main Content -->
+    <main class="main-content lg:ml-72 pt-16 min-h-screen transition-all duration-300">
+        <div class="p-6">
+            <!-- Farm Overview Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                <div class="bg-white rounded-xl p-6 shadow-sm">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-600">Total Boxes</p>
+                            <p class="text-2xl font-bold text-gray-900">80</p>
+                        </div>
+                        <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-th-large text-blue-600 text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-white rounded-xl p-6 shadow-sm">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-600">Active Crabs</p>
+                            <p class="text-2xl font-bold text-green-600" id="activeCrabsCount">0</p>
+                        </div>
+                        <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-fish text-green-600 text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-white rounded-xl p-6 shadow-sm">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-600">Ready for Harvest</p>
+                            <p class="text-2xl font-bold text-orange-600" id="readyHarvestCount">0</p>
+                        </div>
+                        <div class="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-weight-hanging text-orange-600 text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-white rounded-xl p-6 shadow-sm">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-600">Mortality Rate</p>
+                            <p class="text-2xl font-bold text-red-600" id="mortalityRate">0%</p>
+                        </div>
+                        <div class="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-exclamation-triangle text-red-600 text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 80-Box Grid -->
+            <div class="bg-white rounded-xl p-6 shadow-sm">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-xl font-bold text-gray-900">80-Box Vertical Crab Farm</h2>
+                    <div class="flex items-center space-x-4">
+                        <div class="flex items-center space-x-2 text-sm">
+                            <div class="w-4 h-4 bg-gray-400 rounded"></div>
+                            <span>Empty</span>
+                        </div>
+                        <div class="flex items-center space-x-2 text-sm">
+                            <div class="w-4 h-4 bg-green-500 rounded"></div>
+                            <span>Active</span>
+                        </div>
+                        <div class="flex items-center space-x-2 text-sm">
+                            <div class="w-4 h-4 bg-orange-500 rounded"></div>
+                            <span>Ready</span>
+                        </div>
+                        <div class="flex items-center space-x-2 text-sm">
+                            <div class="w-4 h-4 bg-red-500 rounded"></div>
+                            <span>Dead</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="grid grid-cols-8 gap-3" id="crabGrid">
+                    <!-- Boxes will be generated by JavaScript -->
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Mobile Overlay -->
+    <div id="mobileOverlay" class="mobile-overlay fixed inset-0 z-40 hidden lg:hidden"></div>
+
+    <!-- Crab Profile Modal -->
+    <div id="crabModal" class="modal fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div class="p-6 border-b border-gray-200">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-2xl font-bold text-gray-900" id="modalTitle">Box 1 - Crab Profile</h2>
+                    <button onclick="closeCrabModal()" class="text-gray-400 hover:text-gray-600">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="p-6">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <!-- Crab Information -->
+                    <div>
+                        <h3 class="text-lg font-semibold mb-4">Crab Information</h3>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Crab ID</label>
+                                <input type="text" id="crabId" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Enter crab ID">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                                <select id="crabStatus" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                    <option value="empty">Empty</option>
+                                    <option value="alive">Alive</option>
+                                    <option value="dead">Dead</option>
+                                    <option value="harvested">Harvested</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Target Weight (kg)</label>
+                                <input type="number" id="targetWeight" step="0.1" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="0.5">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Date Added</label>
+                                <input type="date" id="dateAdded" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            </div>
+                            <div id="deathDateDiv" class="hidden">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Date of Death</label>
+                                <input type="date" id="deathDate" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Growth Records -->
+                    <div>
+                        <h3 class="text-lg font-semibold mb-4">Growth Records</h3>
+                        <div class="space-y-4">
+                            <div class="grid grid-cols-3 gap-3">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Weight (kg)</label>
+                                    <input type="number" id="currentWeight" step="0.01" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="0.00">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Length (cm)</label>
+                                    <input type="number" id="currentLength" step="0.1" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="0.0">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Width (cm)</label>
+                                    <input type="number" id="currentWidth" step="0.1" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="0.0">
+                                </div>
+                            </div>
+                            <button onclick="addGrowthRecord()" class="w-full bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition-colors">
+                                <i class="fas fa-plus mr-2"></i>Add Growth Record
+                            </button>
+                        </div>
+                        
+                        <!-- Growth Chart -->
+                        <div class="mt-6">
+                            <canvas id="growthChart" class="growth-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Feeding Schedule -->
+                <div class="mt-8">
+                    <h3 class="text-lg font-semibold mb-4">Feeding Schedule</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Feed Type</label>
+                            <select id="feedType" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                <option value="TAMBAN">TAMBAN</option>
+                                <option value="KUHOL">KUHOL</option>
+                                <option value="FEEDS">FEEDS</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Amount (g)</label>
+                            <input type="number" id="feedAmount" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="50">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Frequency</label>
+                            <select id="feedFrequency" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                <option value="daily">Daily</option>
+                                <option value="weekly">Weekly</option>
+                                <option value="monthly">Monthly</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button onclick="updateFeedingSchedule()" class="mt-4 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors">
+                        <i class="fas fa-utensils mr-2"></i>Update Feeding Schedule
+                    </button>
+                </div>
+                
+                <!-- Growth History -->
+                <div class="mt-8">
+                    <h3 class="text-lg font-semibold mb-4">Growth History</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-4 py-2 text-left">Date</th>
+                                    <th class="px-4 py-2 text-left">Weight (kg)</th>
+                                    <th class="px-4 py-2 text-left">Length (cm)</th>
+                                    <th class="px-4 py-2 text-left">Width (cm)</th>
+                                    <th class="px-4 py-2 text-left">Growth Rate</th>
+                                    <!-- Added Actions column header for update buttons -->
+                                    <th class="px-4 py-2 text-left">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="growthHistoryTable">
+                                <!-- Growth records will be populated here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <!-- Action Buttons -->
+                <div class="mt-8 flex justify-end space-x-4">
+                    <button onclick="deleteCrab()" class="bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700 transition-colors">
+                        <i class="fas fa-trash mr-2"></i>Delete Crab
+                    </button>
+                    <button onclick="saveCrabData()" class="bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors">
+                        <i class="fas fa-save mr-2"></i>Save Changes
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics Modal -->
+    <div id="statisticsModal" class="modal fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl max-w-6xl w-full max-h-[90vh] overflow-y-auto">
+            <div class="p-6 border-b border-gray-200">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-2xl font-bold text-gray-900">Farm Statistics & Analytics</h2>
+                    <button onclick="closeStatistics()" class="text-gray-400 hover:text-gray-600">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="p-6">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <!-- Top Performers -->
+                    <div>
+                        <h3 class="text-lg font-semibold mb-4">Top Performing Crabs</h3>
+                        <div id="topPerformers" class="space-y-3">
+                            <!-- Top performers will be populated here -->
+                        </div>
+                    </div>
+                    
+                    <!-- Growth Comparison Chart -->
+                    <div>
+                        <h3 class="text-lg font-semibold mb-4">Average Growth Comparison</h3>
+                        <canvas id="comparisonChart" class="growth-chart"></canvas>
+                    </div>
+                </div>
+                
+                <!-- Mortality Analysis -->
+                <div class="mt-8">
+                    <h3 class="text-lg font-semibold mb-4">Mortality Analysis</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="bg-red-50 p-4 rounded-lg">
+                            <h4 class="font-medium text-red-800">Total Deaths</h4>
+                            <p class="text-2xl font-bold text-red-600" id="totalDeaths">0</p>
+                        </div>
+                        <div class="bg-yellow-50 p-4 rounded-lg">
+                            <h4 class="font-medium text-yellow-800">This Month</h4>
+                            <p class="text-2xl font-bold text-yellow-600" id="monthlyDeaths">0</p>
+                        </div>
+                        <div class="bg-blue-50 p-4 rounded-lg">
+                            <h4 class="font-medium text-blue-800">Expected (5%)</h4>
+                            <p class="text-2xl font-bold text-blue-600" id="expectedDeaths">4</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Export Options -->
+                <div class="mt-8 flex justify-end space-x-4">
+                    <button onclick="exportData('csv')" class="bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition-colors">
+                        <i class="fas fa-file-csv mr-2"></i>Export CSV
+                    </button>
+                    <button onclick="exportData('json')" class="bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors">
+                        <i class="fas fa-file-code mr-2"></i>Export JSON
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let crabData = {};
+        let currentBoxId = null;
+        let growthChart = null;
+        let comparisonChart = null;
+        let isUpdatingRecord = false;
+        let updateRecordIndex = -1;
+
+        
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeCrabGrid();
+            loadCrabData();
+            updateDashboard();
+            setupMobileMenu();
+        });
+
+        function setupMobileMenu() {
+            const mobileMenuButton = document.getElementById('mobileMenuButton');
+            const sidebar = document.getElementById('sidebar');
+            const mobileOverlay = document.getElementById('mobileOverlay');
+
+            mobileMenuButton.addEventListener('click', function() {
+                sidebar.classList.toggle('sidebar-open');
+                mobileOverlay.classList.toggle('hidden');
+            });
+
+            mobileOverlay.addEventListener('click', function() {
+                sidebar.classList.remove('sidebar-open');
+                mobileOverlay.classList.add('hidden');
+            });
+        }
+
+        function toggleDropdown() {
+            const dropdown = document.getElementById('dropdownMenu');
+            dropdown.classList.toggle('hidden');
+        }
+
+        function toggleNotif() {
+            const notifMenu = document.getElementById('notifMenu');
+            notifMenu.classList.toggle('hidden');
+        }
+
+        function logout() {
+            if (confirm('Are you sure you want to sign out?')) {
+                window.location.href = '/logout';
+            }
+        }
+
+        // Initialize 80-box grid
+        function initializeCrabGrid() {
+            const grid = document.getElementById('crabGrid');
+            grid.innerHTML = '';
+            
+            for (let i = 1; i <= 80; i++) {
+                const box = document.createElement('div');
+                box.className = 'crab-box empty h-20 rounded-lg flex flex-col items-center justify-center text-white font-semibold text-sm relative';
+                box.id = `box-${i}`;
+                box.onclick = () => openCrabModal(i);
+                
+                box.innerHTML = `
+                    <div class="text-xs opacity-75">Box ${i}</div>
+                    <div class="text-lg">
+                        <i class="fas fa-plus"></i>
+                    </div>
+                `;
+                
+                grid.appendChild(box);
+            }
+        }
+
+        // Load crab data from localStorage (simulating database)
+        function loadCrabData() {
+            const saved = localStorage.getItem('crabFarmData');
+            if (saved) {
+                crabData = JSON.parse(saved);
+                updateCrabGrid();
+            }
+        }
+
+        // Save crab data to localStorage
+        function saveCrabDataToStorage() {
+            localStorage.setItem('crabFarmData', JSON.stringify(crabData));
+        }
+
+        function getCurrentCrabData() {
+            if (!currentBoxId || !crabData[currentBoxId]) {
+                return null;
+            }
+            return crabData[currentBoxId];
+        }
+
+        // Update crab grid display
+        function updateCrabGrid() {
+            for (let i = 1; i <= 80; i++) {
+                const box = document.getElementById(`box-${i}`);
+                const crab = crabData[i];
+                
+                if (!crab || crab.status === 'empty') {
+                    box.className = 'crab-box empty h-20 rounded-lg flex flex-col items-center justify-center text-white font-semibold text-sm relative';
+                    box.innerHTML = `
+                        <div class="text-xs opacity-75">Box ${i}</div>
+                        <div class="text-lg">
+                            <i class="fas fa-plus"></i>
+                        </div>
+                    `;
+                } else {
+                    const isReadyForHarvest = crab.currentWeight >= crab.targetWeight;
+                    let boxClass = 'crab-box alive';
+                    let icon = 'fas fa-fish';
+                    
+                    if (crab.status === 'dead') {
+                        boxClass = 'crab-box dead';
+                        icon = 'fas fa-skull';
+                    } else if (isReadyForHarvest) {
+                        boxClass = 'crab-box ready-harvest';
+                        icon = 'fas fa-weight-hanging';
+                    }
+                    
+                    box.className = `${boxClass} h-20 rounded-lg flex flex-col items-center justify-center text-white font-semibold text-sm relative`;
+                    box.innerHTML = `
+                        <div class="text-xs opacity-75">Box ${i}</div>
+                        <div class="text-lg">
+                            <i class="${icon}"></i>
+                        </div>
+                        <div class="text-xs opacity-75">${crab.currentWeight || 0}kg</div>
+                        <button class="absolute top-1 right-1 bg-blue-500 hover:bg-blue-600 text-white text-xs px-2 py-1 rounded transition-colors" 
+                                onclick="event.stopPropagation(); openCrabModal(${i})" 
+                                title="Update Crab">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                    `;
+                }
+            }
+        }
+
+        // Update dashboard statistics
+        function updateDashboard() {
+            let activeCount = 0;
+            let readyCount = 0;
+            let deadCount = 0;
+            let totalCrabs = 0;
+
+            Object.values(crabData).forEach(crab => {
+                if (crab && crab.status !== 'empty') {
+                    totalCrabs++;
+                    if (crab.status === 'alive') {
+                        activeCount++;
+                        if (crab.currentWeight >= crab.targetWeight) {
+                            readyCount++;
+                        }
+                    } else if (crab.status === 'dead') {
+                        deadCount++;
+                    }
+                }
+            });
+
+            document.getElementById('activeCrabsCount').textContent = activeCount;
+            document.getElementById('readyHarvestCount').textContent = readyCount;
+            
+            const mortalityRate = totalCrabs > 0 ? ((deadCount / totalCrabs) * 100).toFixed(1) : 0;
+            document.getElementById('mortalityRate').textContent = `${mortalityRate}%`;
+        }
+
+        // Open crab modal
+        function openCrabModal(boxId) {
+            currentBoxId = boxId;
+            const crab = crabData[boxId] || {
+                id: '',
+                status: 'empty',
+                targetWeight: 0.5,
+                dateAdded: '',
+                deathDate: '',
+                currentWeight: 0,
+                currentLength: 0,
+                currentWidth: 0,
+                growthRecords: [],
+                feedingSchedule: {
+                    type: 'TAMBAN',
+                    amount: 50,
+                    frequency: 'daily'
+                }
+            };
+
+            document.getElementById('modalTitle').textContent = `Box ${boxId} - Crab Profile`;
+            document.getElementById('crabId').value = crab.id || '';
+            document.getElementById('crabStatus').value = crab.status || 'empty';
+            document.getElementById('targetWeight').value = crab.targetWeight || 0.5;
+            document.getElementById('dateAdded').value = crab.dateAdded || '';
+            document.getElementById('deathDate').value = crab.deathDate || '';
+            document.getElementById('currentWeight').value = crab.currentWeight || 0;
+            document.getElementById('currentLength').value = crab.currentLength || 0;
+            document.getElementById('currentWidth').value = crab.currentWidth || 0;
+            document.getElementById('feedType').value = crab.feedingSchedule?.type || 'TAMBAN';
+            document.getElementById('feedAmount').value = crab.feedingSchedule?.amount || 50;
+            document.getElementById('feedFrequency').value = crab.feedingSchedule?.frequency || 'daily';
+
+            // Show/hide death date field
+            const deathDateDiv = document.getElementById('deathDateDiv');
+            if (crab.status === 'dead') {
+                deathDateDiv.classList.remove('hidden');
+            } else {
+                deathDateDiv.classList.add('hidden');
+            }
+
+            // Update growth history table
+            updateGrowthHistoryTable(crab.growthRecords || []);
+            
+            // Create growth chart
+            createGrowthChart(crab.growthRecords || []);
+
+            document.getElementById('crabModal').classList.remove('hidden');
+        }
+
+        // Close crab modal
+        function closeCrabModal() {
+            document.getElementById('crabModal').classList.add('hidden');
+            isUpdatingRecord = false;
+            updateRecordIndex = -1;
+            resetGrowthForm();
+            if (growthChart) {
+                growthChart.destroy();
+                growthChart = null;
+            }
+        }
+
+        function resetGrowthForm() {
+            const addButton = document.querySelector('button[onclick="addGrowthRecord()"]');
+            if (addButton) {
+                addButton.innerHTML = '<i class="fas fa-plus mr-2"></i>Add Growth Record';
+                addButton.onclick = addGrowthRecord;
+            }
+        }
+
+        function updateFeedingSchedule() {
+            if (!currentBoxId) {
+                alert('Please select a crab first');
+                return;
+            }
+
+            const feedType = document.getElementById('feedType').value;
+            const feedAmount = parseFloat(document.getElementById('feedAmount').value);
+            const feedFrequency = document.getElementById('feedFrequency').value;
+
+            if (!feedAmount || feedAmount <= 0) {
+                alert('Please enter a valid feed amount');
+                return;
+            }
+
+            // Initialize crab data if it doesn't exist
+            if (!crabData[currentBoxId]) {
+                crabData[currentBoxId] = {
+                    id: '',
+                    status: 'alive',
+                    targetWeight: 0.5,
+                    currentWeight: 0,
+                    currentLength: 0,
+                    currentWidth: 0,
+                    growthRecords: [],
+                    feedingSchedule: {}
+                };
+            }
+
+            // Update feeding schedule
+            crabData[currentBoxId].feedingSchedule = {
+                type: feedType,
+                amount: feedAmount,
+                frequency: feedFrequency,
+                lastUpdated: new Date().toISOString().split('T')[0]
+            };
+
+            saveCrabDataToStorage();
+            alert('Feeding schedule updated successfully!');
+        }
+
+        function addGrowthRecord() {
+            if (!currentBoxId) {
+                alert('Please select a crab first');
+                return;
+            }
+
+            const weight = parseFloat(document.getElementById('currentWeight').value);
+            const length = parseFloat(document.getElementById('currentLength').value);
+            const width = parseFloat(document.getElementById('currentWidth').value);
+            const today = new Date().toISOString().split('T')[0];
+
+            if (!weight || !length || !width) {
+                alert('Please fill in weight, length, and width');
+                return;
+            }
+
+            // Initialize crab data if it doesn't exist
+            if (!crabData[currentBoxId]) {
+                crabData[currentBoxId] = {
+                    id: document.getElementById('crabId').value || `CRAB-${currentBoxId}`,
+                    status: 'alive',
+                    targetWeight: parseFloat(document.getElementById('targetWeight').value) || 0.5,
+                    dateAdded: document.getElementById('dateAdded').value || today,
+                    currentWeight: 0,
+                    currentLength: 0,
+                    currentWidth: 0,
+                    growthRecords: [],
+                    feedingSchedule: {
+                        type: 'TAMBAN',
+                        amount: 50,
+                        frequency: 'daily'
+                    }
+                };
+            }
+
+            // Initialize growth records if it doesn't exist
+            if (!crabData[currentBoxId].growthRecords) {
+                crabData[currentBoxId].growthRecords = [];
+            }
+
+            if (isUpdatingRecord && updateRecordIndex >= 0) {
+                // Update existing record
+                crabData[currentBoxId].growthRecords[updateRecordIndex] = {
+                    date: today,
+                    weight: weight,
+                    length: length,
+                    width: width
+                };
+                isUpdatingRecord = false;
+                updateRecordIndex = -1;
+                resetGrowthForm();
+                alert('Growth record updated successfully!');
+            } else {
+                // Add new record
+                const record = {
+                    date: today,
+                    weight: weight,
+                    length: length,
+                    width: width
+                };
+
+                crabData[currentBoxId].growthRecords.push(record);
+                alert('Growth record added successfully!');
+            }
+            
+            // Sort records by date
+            crabData[currentBoxId].growthRecords.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+            // Update current measurements
+            crabData[currentBoxId].currentWeight = weight;
+            crabData[currentBoxId].currentLength = length;
+            crabData[currentBoxId].currentWidth = width;
+
+            // Update display
+            updateGrowthHistoryTable(crabData[currentBoxId].growthRecords);
+            updateCrabGrid();
+            updateDashboard();
+            saveCrabDataToStorage();
+            
+            // Clear form fields
+            document.getElementById('currentWeight').value = '';
+            document.getElementById('currentLength').value = '';
+            document.getElementById('currentWidth').value = '';
+        }
+
+        function updateGrowthRecord(recordIndex) {
+            const currentCrab = getCurrentCrabData();
+            if (!currentCrab || !currentCrab.growthRecords || recordIndex >= currentCrab.growthRecords.length) {
+                alert('Growth record not found');
+                return;
+            }
+
+            const record = currentCrab.growthRecords[recordIndex];
+            
+            // Pre-fill form with existing data
+            document.getElementById('currentWeight').value = record.weight;
+            document.getElementById('currentLength').value = record.length;
+            document.getElementById('currentWidth').value = record.width;
+
+            // Set update mode
+            isUpdatingRecord = true;
+            updateRecordIndex = recordIndex;
+
+            // Change button text
+            const addButton = document.querySelector('button[onclick="addGrowthRecord()"]');
+            if (addButton) {
+                addButton.innerHTML = '<i class="fas fa-save mr-2"></i>Update Record';
+            }
+
+            alert('Form filled with existing data. Modify values and click "Update Record" to save changes.');
+        }
+
+        function updateGrowthHistoryTable(growthRecords) {
+            const tbody = document.getElementById('growthHistoryTable');
+            tbody.innerHTML = '';
+
+            if (!growthRecords || growthRecords.length === 0) {
+                const row = document.createElement('tr');
+                row.innerHTML = '<td colspan="6" class="px-4 py-8 text-center text-gray-500">No growth records yet</td>';
+                tbody.appendChild(row);
+                return;
+            }
+
+            growthRecords.forEach((record, index) => {
+                const row = document.createElement('tr');
+                row.className = 'border-b border-gray-200 hover:bg-gray-50';
+                
+                // Calculate growth rate compared to previous record
+                let growthRate = 'N/A';
+                if (index > 0) {
+                    const prevWeight = growthRecords[index - 1].weight;
+                    const currentWeight = record.weight;
+                    const daysDiff = Math.abs(new Date(record.date) - new Date(growthRecords[index - 1].date)) / (1000 * 60 * 60 * 24);
+                    if (daysDiff > 0) {
+                        growthRate = (((currentWeight - prevWeight) / daysDiff) * 7).toFixed(3) + ' g/week';
+                    }
+                }
+
+                row.innerHTML = `
+                    <td class="px-4 py-2">${record.date}</td>
+                    <td class="px-4 py-2">${record.weight} kg</td>
+                    <td class="px-4 py-2">${record.length} cm</td>
+                    <td class="px-4 py-2">${record.width} cm</td>
+                    <td class="px-4 py-2 ${parseFloat(growthRate) > 0 ? 'text-green-600' : 'text-red-600'}">${growthRate}</td>
+                    <td class="px-4 py-2">
+                        <button onclick="updateGrowthRecord(${index})" class="bg-yellow-500 text-white px-3 py-1 rounded text-xs hover:bg-yellow-600 transition-colors mr-2">
+                            <i class="fas fa-edit mr-1"></i>Update
+                        </button>
+                        <button onclick="deleteGrowthRecord(${index})" class="bg-red-500 text-white px-3 py-1 rounded text-xs hover:bg-red-600 transition-colors">
+                            <i class="fas fa-trash mr-1"></i>Delete
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function deleteGrowthRecord(recordIndex) {
+            if (!confirm('Are you sure you want to delete this growth record?')) {
+                return;
+            }
+
+            const currentCrab = getCurrentCrabData();
+            if (!currentCrab || !currentCrab.growthRecords || recordIndex >= currentCrab.growthRecords.length) {
+                alert('Growth record not found');
+                return;
+            }
+
+            // Remove the record
+            currentCrab.growthRecords.splice(recordIndex, 1);
+
+            // Update the display
+            updateGrowthHistoryTable(currentCrab.growthRecords);
+            saveCrabDataToStorage();
+            
+            alert('Growth record deleted successfully!');
+        }
+
+        function saveCrabData() {
+            if (!currentBoxId) {
+                alert('No crab selected');
+                return;
+            }
+
+            const crabId = document.getElementById('crabId').value;
+            const status = document.getElementById('crabStatus').value;
+            const targetWeight = parseFloat(document.getElementById('targetWeight').value);
+            const dateAdded = document.getElementById('dateAdded').value;
+            const deathDate = document.getElementById('deathDate').value;
+
+            if (!crabId && status !== 'empty') {
+                alert('Please enter a crab ID');
+                return;
+            }
+
+            if (status === 'empty') {
+                delete crabData[currentBoxId];
+            } else {
+                if (!crabData[currentBoxId]) {
+                    crabData[currentBoxId] = {
+                        growthRecords: [],
+                        feedingSchedule: {
+                            type: 'TAMBAN',
+                            amount: 50,
+                            frequency: 'daily'
+                        }
+                    };
+                }
+
+                crabData[currentBoxId].id = crabId;
+                crabData[currentBoxId].status = status;
+                crabData[currentBoxId].targetWeight = targetWeight || 0.5;
+                crabData[currentBoxId].dateAdded = dateAdded;
+                crabData[currentBoxId].deathDate = deathDate;
+            }
+
+            saveCrabDataToStorage();
+            updateCrabGrid();
+            updateDashboard();
+            alert('Crab data saved successfully!');
+        }
+
+        function deleteCrab() {
+            if (!currentBoxId) {
+                alert('No crab selected');
+                return;
+            }
+
+            if (!confirm('Are you sure you want to delete this crab? This action cannot be undone.')) {
+                return;
+            }
+
+            delete crabData[currentBoxId];
+            saveCrabDataToStorage();
+            updateCrabGrid();
+            updateDashboard();
+            closeCrabModal();
+            alert('Crab deleted successfully!');
+        }
+
+        function createGrowthChart(growthRecords) {
+            const ctx = document.getElementById('growthChart');
+            if (!ctx) return;
+
+            if (growthChart) {
+                growthChart.destroy();
+            }
+
+            const labels = growthRecords.map(record => record.date);
+            const weights = growthRecords.map(record => record.weight);
+
+            growthChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Weight (kg)',
+                        data: weights,
+                        borderColor: 'rgb(59, 130, 246)',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        tension: 0.1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Weight (kg)'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Date'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function showStatistics() {
+            document.getElementById('statisticsModal').classList.remove('hidden');
+            // Add statistics logic here
+        }
+
+        function closeStatistics() {
+            document.getElementById('statisticsModal').classList.add('hidden');
+        }
+
+        // Handle status change
+        document.getElementById('crabStatus').addEventListener('change', function() {
+            const deathDateDiv = document.getElementById('deathDateDiv');
+            if (this.value === 'dead') {
+                deathDateDiv.classList.remove('hidden');
+            } else {
+                deathDateDiv.classList.add('hidden');
+            }
+        });
+
+        // Close modals when clicking outside
+        document.addEventListener('click', function(event) {
+            if (event.target.classList.contains('modal')) {
+                if (event.target.id === 'crabModal') {
+                    closeCrabModal();
+                } else if (event.target.id === 'statisticsModal') {
+                    closeStatistics();
+                }
+            }
+        });
+    </script>
+</body>
+</html>
