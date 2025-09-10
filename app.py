@@ -46,13 +46,14 @@ app = Flask(__name__)
 app.secret_key = "vcrab_secret_key"
 socketio = SocketIO(app, cors_allowed_origins="*")
 
-# Database Configuration
 db_config = {
-    "host": "localhost",
+    "host": "hopper.proxy.rlwy.net",  
     "user": "root",
-    "password": "",
-    "database": "vcrab_db"
+    "password": "ESwDjBGnHlTcYOEYFHkvzWVidzEFZZCO",
+    "database": "railway",
+    "port": 18476                      
 }
+
 
 email_config = {
     "email": "icallakate0285@gmail.com",
