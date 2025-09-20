@@ -64,7 +64,7 @@ email_config = {
 
 def get_db_connection():
     try:
-        return mysql.connector.connect(**db_config)
+        return mysql.connector.connect(**db_config, connection_timeout=30)
     except mysql.connector.Error as e:
         print("Database connection error:", e)
         return None
@@ -85,11 +85,14 @@ def send_email(to, subject, text, html=None):
             part2 = MIMEText(html, 'html')
             msg.attach(part2)
         
-        # Create secure connection with server and send email
-        with smtplib.SMTP(email_config["smtp_server"], email_config["smtp_port"]) as server:
-            server.ehlo()  # Can be omitted
-            server.starttls()  # Secure the connection
-            server.ehlo()  # Can be omitted
+        with smtplib.SMTP(
+            email_config["smtp_server"],
+            email_config["smtp_port"],
+            timeout=30   
+        ) as server:
+            server.ehlo()
+            server.starttls()
+            server.ehlo()
             server.login(email_config["email"], email_config["password"])
             server.send_message(msg)
         
@@ -142,14 +145,14 @@ def verify_reset_code():
 @app.route('/reset-password', methods=['GET', 'POST'])
 def reset_password():
     if request.method == 'GET':
-        reset_code = request.args.get('reset_code')  
+        reset_code = request.args.get('reset_code')  # Retrieve from URL for GET
         if not reset_code:
             flash('Invalid or expired reset code', 'error')
             return redirect(url_for('forgot_password'))
         return render_template('reset_password.html', reset_code=reset_code)
     
     elif request.method == 'POST':
-        reset_code = request.form.get('reset_code') 
+        reset_code = request.form.get('reset_code')  # Retrieve from form for POST
         new_password = request.form.get('password')
         confirm_password = request.form.get('confirm_password')
 
