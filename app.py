@@ -141,42 +141,52 @@ def verify_reset_code():
 
 @app.route('/reset-password', methods=['GET', 'POST'])
 def reset_password():
-    reset_code = request.args.get('reset_code')  # Retrieve the reset code from URL parameter
-    if not reset_code:
-        flash('Invalid or expired reset code', 'error')
-        return redirect(url_for('forgot_password'))
-
-    if request.method == 'POST':
+    if request.method == 'GET':
+        reset_code = request.args.get('reset_code')  
+        if not reset_code:
+            flash('Invalid or expired reset code', 'error')
+            return redirect(url_for('forgot_password'))
+        return render_template('reset_password.html', reset_code=reset_code)
+    
+    elif request.method == 'POST':
+        reset_code = request.form.get('reset_code') 
         new_password = request.form.get('password')
         confirm_password = request.form.get('confirm_password')
+
+        if not reset_code:
+            flash('Invalid or expired reset code', 'error')
+            return redirect(url_for('forgot_password'))
 
         if new_password != confirm_password:
             flash('Passwords do not match.', 'error')
             return redirect(url_for('reset_password', reset_code=reset_code))
 
-        # Hash the new password
         hashed_password = generate_password_hash(new_password)
 
-        # Update the password in the database
         conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute("""
-            UPDATE users
-            SET password = %s
-            WHERE id = (SELECT user_id FROM password_reset_codes WHERE reset_code = %s)
-        """, (hashed_password, reset_code))
-        conn.commit()
+        try:
+            cursor.execute("""
+                UPDATE users
+                SET password = %s
+                WHERE id = (SELECT user_id FROM password_reset_codes WHERE reset_code = %s)
+            """, (hashed_password, reset_code))
+            conn.commit()
 
-        # Remove the reset code from the database (it's already used)
-        cursor.execute("DELETE FROM password_reset_codes WHERE reset_code = %s", (reset_code,))
-        conn.commit()
+            cursor.execute("DELETE FROM password_reset_codes WHERE reset_code = %s", (reset_code,))
+            conn.commit()
+            
+            flash('Your password has been reset successfully!', 'success')
+            return redirect(url_for('login'))
+        except Exception as e:
+            conn.rollback()
+            app.logger.error(f"Error resetting password: {str(e)}")
+            flash('An error occurred while resetting your password. Please try again.', 'error')
+            return redirect(url_for('reset_password', reset_code=reset_code))
+        finally:
+            conn.close()
 
-        flash('Your password has been reset successfully!', 'success')
-        return redirect(url_for('login'))
-
-    return render_template('reset_password.html', reset_code=reset_code)
-
-app.config['SECURITY_PASSWORD_SALT'] = 'vcrab_salt'  # Change this to a unique value
+app.config['SECURITY_PASSWORD_SALT'] = 'vcrab_salt'  
 
 login_manager = LoginManager()
 login_manager.init_app(app)
