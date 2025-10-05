@@ -85,21 +85,45 @@ def send_email(to, subject, text, html=None):
             part2 = MIMEText(html, 'html')
             msg.attach(part2)
         
+        # Increased timeout and better error handling
         with smtplib.SMTP(
             email_config["smtp_server"],
             email_config["smtp_port"],
-            timeout=30   
+            timeout=60   # Increased timeout for hosted environments
         ) as server:
+            server.set_debuglevel(1)  # Enable debug output
             server.ehlo()
             server.starttls()
             server.ehlo()
             server.login(email_config["email"], email_config["password"])
             server.send_message(msg)
         
-        print(f"Email successfully sent to {to}")
+        print(f"✓ Email successfully sent to {to}")
+        app.logger.info(f"Email successfully sent to {to}")
         return True
+        
+    except smtplib.SMTPAuthenticationError as e:
+        error_msg = f"SMTP Authentication failed: {str(e)}"
+        print(error_msg)
+        app.logger.error(error_msg)
+        return False
+        
+    except smtplib.SMTPConnectError as e:
+        error_msg = f"Failed to connect to SMTP server: {str(e)}"
+        print(error_msg)
+        app.logger.error(error_msg)
+        return False
+        
+    except smtplib.SMTPException as e:
+        error_msg = f"SMTP error occurred: {str(e)}"
+        print(error_msg)
+        app.logger.error(error_msg)
+        return False
+        
     except Exception as e:
-        print(f"Failed to send email to {to}. Error: {str(e)}")
+        error_msg = f"Unexpected error sending email to {to}: {str(e)}"
+        print(error_msg)
+        app.logger.error(error_msg)
         return False
 
 # Custom JSON encoder for Decimal types
@@ -511,58 +535,97 @@ VCRAB Team"""
 def forgot_password():
     if request.method == 'POST':
         email = request.form.get('email')
+        
         if not email:
-            flash('Please enter your email address', 'error')
+            flash('Please provide an email address', 'error')
             return redirect(url_for('forgot_password'))
 
         conn = get_db_connection()
         if not conn:
-            flash('Database connection error', 'error')
+            flash('Database connection error. Please try again later.', 'error')
             return redirect(url_for('forgot_password'))
+            
+        cursor = conn.cursor(dictionary=True)
 
         try:
-            cursor = conn.cursor(dictionary=True)
-            cursor.execute("SELECT id, email, username FROM users WHERE email = %s", (email,))
+            # Check if the user exists
+            cursor.execute("SELECT * FROM users WHERE email = %s", (email,))
             user = cursor.fetchone()
 
             if not user:
-                flash('Email address not found', 'error')
-                return redirect(url_for('forgot_password'))
+                # Don't reveal if email exists or not for security
+                flash('If that email exists, a reset code has been sent.', 'info')
+                return redirect(url_for('verify_reset_code'))
 
-            # Generate a 6-digit reset code (numeric only)
-            reset_code = ''.join(random.choices('0123456789', k=6))  # Numeric code only
-            expires_at = datetime.now() + timedelta(hours=1)  # Set expiration time to 1 hour
+            # Generate a random 6-digit reset code
+            reset_code = ''.join(random.choices(string.digits, k=6))
+            expires_at = datetime.now() + timedelta(minutes=15)
+
+            # Delete any existing reset codes for this user
+            cursor.execute("DELETE FROM password_reset_codes WHERE user_id = %s", (user['id'],))
             
-            # Store the reset code in the database
+            # Insert the new reset code
             cursor.execute("""
                 INSERT INTO password_reset_codes (user_id, reset_code, expires_at)
                 VALUES (%s, %s, %s)
             """, (user['id'], reset_code, expires_at))
             conn.commit()
 
-            # Send the reset code to the user's email
+            # Send email with the reset code
             subject = "Password Reset Code"
-            message = f"""Hello {user['username']},
+            text_body = f"""
+Hello,
 
-Here is your password reset code: {reset_code}.
-It will expire in 1 hour.
+Your password reset code is: {reset_code}
 
-If you did not request this, please ignore this email.
+This code will expire in 15 minutes.
 
-Thank you, Vcrab Team."""
-            send_email(user['email'], subject, message)
+If you didn't request this, please ignore this email.
 
-            flash('A reset code has been sent to your email', 'success')
-            return redirect(url_for('verify_reset_code'))  # Redirect to a page to input the reset code
+Best regards,
+Your App Team
+            """
+            
+            html_body = f"""
+<html>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+    <div style="max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 5px;">
+        <h2 style="color: #4CAF50;">Password Reset Request</h2>
+        <p>Hello,</p>
+        <p>Your password reset code is:</p>
+        <div style="background-color: #f4f4f4; padding: 15px; text-align: center; font-size: 24px; font-weight: bold; letter-spacing: 5px; margin: 20px 0;">
+            {reset_code}
+        </div>
+        <p><strong>This code will expire in 15 minutes.</strong></p>
+        <p>If you didn't request this password reset, please ignore this email.</p>
+        <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
+        <p style="font-size: 12px; color: #666;">Best regards,<br>Your App Team</p>
+    </div>
+</body>
+</html>
+            """
+
+            email_sent = send_email(email, subject, text_body, html_body)
+            
+            if email_sent:
+                flash('A reset code has been sent to your email.', 'success')
+                app.logger.info(f"Reset code sent successfully to {email}")
+            else:
+                flash('Email service is temporarily unavailable. Please contact support or try again later.', 'error')
+                app.logger.error(f"Failed to send reset code to {email}")
+                cursor.execute("DELETE FROM password_reset_codes WHERE reset_code = %s", (reset_code,))
+                conn.commit()
+                
+            return redirect(url_for('verify_reset_code'))
 
         except Exception as e:
-            flash(f'An error occurred. Please try again. {str(e)}', 'error')
+            conn.rollback()
+            app.logger.error(f"Error in forgot_password: {str(e)}")
+            flash('An error occurred. Please try again later.', 'error')
             return redirect(url_for('forgot_password'))
         finally:
-            if 'cursor' in locals():
-                cursor.close()
-            if conn:
-                conn.close()
+            cursor.close()
+            conn.close()
 
     return render_template('forgot_password.html')
 
