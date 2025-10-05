@@ -68,62 +68,103 @@ def get_db_connection():
     except mysql.connector.Error as e:
         print("Database connection error:", e)
         return None
+        
+import threading
+from queue import Queue
+
+# Email queue for background processing
+email_queue = Queue()
+
+def send_email_worker():
+    """Background worker to send emails"""
+    while True:
+        try:
+            email_data = email_queue.get()
+            if email_data is None:
+                break
+            
+            to = email_data['to']
+            subject = email_data['subject']
+            text = email_data['text']
+            html = email_data.get('html')
+            
+            # Create message container
+            msg = MIMEMultipart('alternative')
+            msg['Subject'] = subject
+            msg['From'] = email_config["email"]
+            msg['To'] = to
+            
+            # Attach both plain text and HTML versions
+            part1 = MIMEText(text, 'plain')
+            msg.attach(part1)
+            
+            if html:
+                part2 = MIMEText(html, 'html')
+                msg.attach(part2)
+            
+            # Try multiple methods to send email
+            success = False
+            
+            # Method 1: Try port 587 with STARTTLS
+            try:
+                with smtplib.SMTP(
+                    email_config["smtp_server"],
+                    email_config["smtp_port"],
+                    timeout=30
+                ) as server:
+                    server.ehlo()
+                    server.starttls()
+                    server.ehlo()
+                    server.login(email_config["email"], email_config["password"])
+                    server.send_message(msg)
+                success = True
+                print(f"✓ Email sent to {to} via port 587")
+            except Exception as e:
+                print(f"Port 587 failed: {str(e)}")
+            
+            # Method 2: Try port 465 with SSL if 587 failed
+            if not success:
+                try:
+                    with smtplib.SMTP_SSL(
+                        email_config["smtp_server"],
+                        465,
+                        timeout=30
+                    ) as server:
+                        server.login(email_config["email"], email_config["password"])
+                        server.send_message(msg)
+                    success = True
+                    print(f"✓ Email sent to {to} via port 465")
+                except Exception as e:
+                    print(f"Port 465 failed: {str(e)}")
+            
+            if success:
+                app.logger.info(f"Email successfully sent to {to}")
+            else:
+                app.logger.error(f"All email methods failed for {to}")
+                
+        except Exception as e:
+            print(f"Email worker error: {str(e)}")
+            app.logger.error(f"Email worker error: {str(e)}")
+        finally:
+            email_queue.task_done()
+
+email_thread = threading.Thread(target=send_email_worker, daemon=True)
+email_thread.start()
 
 def send_email(to, subject, text, html=None):
+    """Queue email for background sending"""
     try:
-        # Create message container
-        msg = MIMEMultipart('alternative')
-        msg['Subject'] = subject
-        msg['From'] = email_config["email"]
-        msg['To'] = to
-        
-        # Attach both plain text and HTML versions
-        part1 = MIMEText(text, 'plain')
-        msg.attach(part1)
-        
-        if html:
-            part2 = MIMEText(html, 'html')
-            msg.attach(part2)
-        
-        # Increased timeout and better error handling
-        with smtplib.SMTP(
-            email_config["smtp_server"],
-            email_config["smtp_port"],
-            timeout=60   # Increased timeout for hosted environments
-        ) as server:
-            server.set_debuglevel(1)  # Enable debug output
-            server.ehlo()
-            server.starttls()
-            server.ehlo()
-            server.login(email_config["email"], email_config["password"])
-            server.send_message(msg)
-        
-        print(f"✓ Email successfully sent to {to}")
-        app.logger.info(f"Email successfully sent to {to}")
+        email_queue.put({
+            'to': to,
+            'subject': subject,
+            'text': text,
+            'html': html
+        })
+        print(f"Email queued for {to}")
         return True
-        
-    except smtplib.SMTPAuthenticationError as e:
-        error_msg = f"SMTP Authentication failed: {str(e)}"
-        print(error_msg)
-        app.logger.error(error_msg)
-        return False
-        
-    except smtplib.SMTPConnectError as e:
-        error_msg = f"Failed to connect to SMTP server: {str(e)}"
-        print(error_msg)
-        app.logger.error(error_msg)
-        return False
-        
-    except smtplib.SMTPException as e:
-        error_msg = f"SMTP error occurred: {str(e)}"
-        print(error_msg)
-        app.logger.error(error_msg)
-        return False
-        
     except Exception as e:
-        error_msg = f"Unexpected error sending email to {to}: {str(e)}"
-        print(error_msg)
-        app.logger.error(error_msg)
+        print(f"Failed to queue email: {str(e)}")
+        app.logger.error(f"Failed to queue email: {str(e)}")
         return False
 
 # Custom JSON encoder for Decimal types
@@ -144,39 +185,60 @@ def index():
 def home():
     """Redirect home to login for authenticated users"""
     return redirect(url_for("login"))
-
 @app.route('/verify-reset-code', methods=['GET', 'POST'])
 def verify_reset_code():
     if request.method == 'POST':
         reset_code = request.form.get('reset_code')
 
-        conn = get_db_connection()
-        cursor = conn.cursor(dictionary=True)
+        conn = None
+        cursor = None
+        
+        try:
+            conn = get_db_connection()
+            if not conn:
+                flash('Database connection error', 'error')
+                return redirect(url_for('forgot_password'))
+                
+            cursor = conn.cursor(dictionary=True)
 
-        # Check if the reset code exists and has not expired
-        cursor.execute("SELECT * FROM password_reset_codes WHERE reset_code = %s AND expires_at > %s", (reset_code, datetime.now()))
-        reset_entry = cursor.fetchone()
+            # Check if the reset code exists and has not expired
+            cursor.execute(
+                "SELECT * FROM password_reset_codes WHERE reset_code = %s AND expires_at > %s", 
+                (reset_code, datetime.now())
+            )
+            reset_entry = cursor.fetchone()
 
-        if not reset_entry:
-            flash('Invalid or expired reset code', 'error')
+            if not reset_entry:
+                flash('Invalid or expired reset code', 'error')
+                return redirect(url_for('forgot_password'))
+
+            # Redirect to the reset password page with the code
+            return redirect(url_for('reset_password', reset_code=reset_code))
+            
+        except Exception as e:
+            app.logger.error(f"Error verifying reset code: {str(e)}")
+            flash('An error occurred. Please try again.', 'error')
             return redirect(url_for('forgot_password'))
-
-        # Redirect to the reset password page with the code as a URL parameter
-        return redirect(url_for('reset_password', reset_code=reset_code))
+        finally:
+            if cursor:
+                cursor.close()
+            if conn:
+                conn.close()
 
     return render_template('verify_reset_code.html')
+
 
 @app.route('/reset-password', methods=['GET', 'POST'])
 def reset_password():
     if request.method == 'GET':
-        reset_code = request.args.get('reset_code')  # Retrieve from URL for GET
+        reset_code = request.args.get('reset_code')
         if not reset_code:
             flash('Invalid or expired reset code', 'error')
             return redirect(url_for('forgot_password'))
         return render_template('reset_password.html', reset_code=reset_code)
     
     elif request.method == 'POST':
-        reset_code = request.form.get('reset_code')  # Retrieve from form for POST
+        reset_code = request.form.get('reset_code')
         new_password = request.form.get('password')
         confirm_password = request.form.get('confirm_password')
 
@@ -190,9 +252,17 @@ def reset_password():
 
         hashed_password = generate_password_hash(new_password)
 
-        conn = get_db_connection()
-        cursor = conn.cursor()
+        conn = None
+        cursor = None
+        
         try:
+            conn = get_db_connection()
+            if not conn:
+                flash('Database connection error', 'error')
+                return redirect(url_for('reset_password', reset_code=reset_code))
+                
+            cursor = conn.cursor()
+            
             cursor.execute("""
                 UPDATE users
                 SET password = %s
@@ -205,13 +275,18 @@ def reset_password():
             
             flash('Your password has been reset successfully!', 'success')
             return redirect(url_for('login'))
+            
         except Exception as e:
-            conn.rollback()
+            if conn:
+                conn.rollback()
             app.logger.error(f"Error resetting password: {str(e)}")
             flash('An error occurred while resetting your password. Please try again.', 'error')
             return redirect(url_for('reset_password', reset_code=reset_code))
         finally:
-            conn.close()
+            if cursor:
+                cursor.close()
+            if conn:
+                conn.close()
 
 app.config['SECURITY_PASSWORD_SALT'] = 'vcrab_salt'  
 
@@ -540,14 +615,17 @@ def forgot_password():
             flash('Please provide an email address', 'error')
             return redirect(url_for('forgot_password'))
 
-        conn = get_db_connection()
-        if not conn:
-            flash('Database connection error. Please try again later.', 'error')
-            return redirect(url_for('forgot_password'))
-            
-        cursor = conn.cursor(dictionary=True)
-
+        conn = None
+        cursor = None
+        
         try:
+            conn = get_db_connection()
+            if not conn:
+                flash('Database connection error. Please try again later.', 'error')
+                return redirect(url_for('forgot_password'))
+                
+            cursor = conn.cursor(dictionary=True)
+
             # Check if the user exists
             cursor.execute("SELECT * FROM users WHERE email = %s", (email,))
             user = cursor.fetchone()
@@ -571,7 +649,7 @@ def forgot_password():
             """, (user['id'], reset_code, expires_at))
             conn.commit()
 
-            # Send email with the reset code
+            # Email content
             subject = "Password Reset Code"
             text_body = f"""
 Hello,
@@ -605,27 +683,36 @@ Your App Team
 </html>
             """
 
-            email_sent = send_email(email, subject, text_body, html_body)
+            # Queue email for background sending (non-blocking)
+            send_email(email, subject, text_body, html_body)
             
-            if email_sent:
-                flash('A reset code has been sent to your email.', 'success')
-                app.logger.info(f"Reset code sent successfully to {email}")
-            else:
-                flash('Email service is temporarily unavailable. Please contact support or try again later.', 'error')
-                app.logger.error(f"Failed to send reset code to {email}")
-                cursor.execute("DELETE FROM password_reset_codes WHERE reset_code = %s", (reset_code,))
-                conn.commit()
-                
+            # Always show success message (email is sent in background)
+            flash('A reset code has been sent to your email. Please check your inbox.', 'success')
+            app.logger.info(f"Reset code generated for {email}: {reset_code}")
+            
             return redirect(url_for('verify_reset_code'))
 
-        except Exception as e:
-            conn.rollback()
-            app.logger.error(f"Error in forgot_password: {str(e)}")
-            flash('An error occurred. Please try again later.', 'error')
+        except mysql.connector.Error as db_err:
+            if conn:
+                conn.rollback()
+            app.logger.error(f"Database error in forgot_password: {str(db_err)}")
+            flash('A database error occurred. Please try again later.', 'error')
             return redirect(url_for('forgot_password'))
+            
+        except Exception as e:
+            if conn:
+                conn.rollback()
+            app.logger.error(f"Error in forgot_password: {str(e)}")
+            import traceback
+            traceback.print_exc() 
+            flash('An unexpected error occurred. Please try again later.', 'error')
+            return redirect(url_for('forgot_password'))
+            
         finally:
-            cursor.close()
-            conn.close()
+            if cursor:
+                cursor.close()
+            if conn:
+                conn.close()
 
     return render_template('forgot_password.html')
 
