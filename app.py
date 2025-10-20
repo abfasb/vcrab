@@ -47,12 +47,13 @@ app.secret_key = "vcrab_secret_key"
 socketio = SocketIO(app, cors_allowed_origins="*")
 
 db_config = {
-    "host": "hopper.proxy.rlwy.net",  
+    "host": "yamanote.proxy.rlwy.net",  
     "user": "root",
-    "password": "ESwDjBGnHlTcYOEYFHkvzWVidzEFZZCO",
+    "password": "UoRSYrErWjZDHZzQDQGoaZkkBVeNjkxq",
     "database": "railway",
-    "port": 18476                      
+    "port": 28563
 }
+
 
 
 email_config = {
