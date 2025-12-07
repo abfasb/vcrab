@@ -8,19 +8,13 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.metrics import accuracy_score
 from math import ceil
-from flask import flash
-from flask import make_response
 from flask_mysqldb import MySQL
 from flask_cors import CORS
-from datetime import datetime
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter, A4
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 from decimal import Decimal
 import io
 import csv
@@ -40,7 +34,14 @@ import openpyxl
 import pytz
 from openpyxl.styles import Font, PatternFill, Alignment
 from openpyxl.utils.dataframe import dataframe_to_rows
+from sendgrid import SendGridAPIClient
+from sendgrid.helpers.mail import Mail
+import threading
+from queue import Queue
+from dotenv import load_dotenv
 
+# <CHANGE> Load environment variables from .env file
+load_dotenv()
 
 app = Flask(__name__)
 app.secret_key = "vcrab_secret_key"
@@ -54,13 +55,11 @@ db_config = {
     "port": 28563
 }
 
-
-
+# <CHANGE> Replaced SMTP config with SendGrid config
 email_config = {
-    "email": "icallakate0285@gmail.com",
-    "password": "yasrayvyssjpuitl",
-    "smtp_server": "smtp.gmail.com",
-    "smtp_port": 587
+    "sendgrid_api_key": os.getenv("SENDGRID_API_KEY"),
+    "email_sender": os.getenv("EMAIL_SENDER"),
+    "email_receiver": os.getenv("EMAIL_RECEIVER")
 }
 
 def get_db_connection():
@@ -69,15 +68,13 @@ def get_db_connection():
     except mysql.connector.Error as e:
         print("Database connection error:", e)
         return None
-        
-import threading
-from queue import Queue
 
 # Email queue for background processing
 email_queue = Queue()
 
+# <CHANGE> Replaced SMTP email worker with SendGrid email worker
 def send_email_worker():
-    """Background worker to send emails"""
+    """Background worker to send emails using SendGrid"""
     while True:
         try:
             email_data = email_queue.get()
@@ -89,59 +86,23 @@ def send_email_worker():
             text = email_data['text']
             html = email_data.get('html')
             
-            # Create message container
-            msg = MIMEMultipart('alternative')
-            msg['Subject'] = subject
-            msg['From'] = email_config["email"]
-            msg['To'] = to
-            
-            # Attach both plain text and HTML versions
-            part1 = MIMEText(text, 'plain')
-            msg.attach(part1)
-            
-            if html:
-                part2 = MIMEText(html, 'html')
-                msg.attach(part2)
-            
-            # Try multiple methods to send email
-            success = False
-            
-            # Method 1: Try port 587 with STARTTLS
             try:
-                with smtplib.SMTP(
-                    email_config["smtp_server"],
-                    email_config["smtp_port"],
-                    timeout=30
-                ) as server:
-                    server.ehlo()
-                    server.starttls()
-                    server.ehlo()
-                    server.login(email_config["email"], email_config["password"])
-                    server.send_message(msg)
-                success = True
-                print(f"✓ Email sent to {to} via port 587")
-            except Exception as e:
-                print(f"Port 587 failed: {str(e)}")
-            
-            # Method 2: Try port 465 with SSL if 587 failed
-            if not success:
-                try:
-                    with smtplib.SMTP_SSL(
-                        email_config["smtp_server"],
-                        465,
-                        timeout=30
-                    ) as server:
-                        server.login(email_config["email"], email_config["password"])
-                        server.send_message(msg)
-                    success = True
-                    print(f"✓ Email sent to {to} via port 465")
-                except Exception as e:
-                    print(f"Port 465 failed: {str(e)}")
-            
-            if success:
+                sg = SendGridAPIClient(email_config["sendgrid_api_key"])
+                message = Mail(
+                    from_email=email_config["email_sender"],
+                    to_emails=to,
+                    subject=subject,
+                    plain_text_content=text,
+                    html_content=html
+                )
+                
+                response = sg.send(message)
+                print(f"✓ Email sent to {to} via SendGrid (Status: {response.status_code})")
                 app.logger.info(f"Email successfully sent to {to}")
-            else:
-                app.logger.error(f"All email methods failed for {to}")
+                
+            except Exception as e:
+                print(f"SendGrid error: {str(e)}")
+                app.logger.error(f"SendGrid error: {str(e)}")
                 
         except Exception as e:
             print(f"Email worker error: {str(e)}")
@@ -173,7 +134,7 @@ class DecimalEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, Decimal):
             return float(obj)
-        return super(DecimalEncoder, obj)
+        return super(DecimalEncoder, self).default(obj)
 
 app.json_encoder = DecimalEncoder
 # ==================== ROUTES ====================
@@ -186,6 +147,7 @@ def index():
 def home():
     """Redirect home to login for authenticated users"""
     return redirect(url_for("login"))
+
 @app.route('/verify-reset-code', methods=['GET', 'POST'])
 def verify_reset_code():
     if request.method == 'POST':
@@ -344,7 +306,7 @@ def register():
             cursor.execute("""
                 INSERT INTO users (username, email, password, status, role)
                 VALUES (%s, %s, %s, %s, %s)
-            """, (username, email, hashed_password, 'pending', 'user'))  # Changed role to 'user'
+            """, (username, email, hashed_password, 'pending', 'user'))
             
             conn.commit()
 
@@ -590,19 +552,18 @@ def create_admin_user():
         subject = "Your VCRAB Admin Account"
         message = f"""Hello {username},
         
-Your VCRAB admin account has been created successfully.
-Username: {username}
-Password: admin
-
-Please change your password immediately after logging in.
+Your VCRAB admin account has been created. 
+Your temporary password is: admin
+Please change this password immediately after your first login.
 
 Thank you,
 VCRAB Team"""
         send_email(email, subject, message)
         
-        return "✅ Admin user created! Username: newadmin | Password: admin"
+        return f"✅ Admin user '{username}' created successfully!"
+
     except Exception as e:
-        return f"❌ Failed to insert admin: {e}"
+        return f"❌ Error: {str(e)}"
     finally:
         cursor.close()
         conn.close()
@@ -662,7 +623,7 @@ This code will expire in 15 minutes.
 If you didn't request this, please ignore this email.
 
 Best regards,
-Your App Team
+Your vCRAB Team
             """
             
             html_body = f"""
@@ -2675,4 +2636,4 @@ def get_harvest_ready():
         return jsonify({"success": False, "error": str(e)}), 500
 
 if __name__ == "__main__":
-    socketio.run(app, host="0.0.0.0", port=5000, debug=True)
+    app.run(debug=True, host="0.0.0.0", port=5000)
